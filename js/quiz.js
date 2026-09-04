@@ -514,15 +514,17 @@ class QuizEngine {
       return false;
     }
 
-    if (!grado || !grado.trim()) {
+    grado = '11°';
+
+    if (!programa || !programa.trim()) {
       if (errorEl) {
-        errorEl.textContent = '⚠️ Por favor selecciona tu Grado de Educación Media (10° o 11°).';
+        errorEl.textContent = '⚠️ Por favor selecciona el Programa de Formación SENA.';
         errorEl.classList.remove('hidden');
       } else {
-        alert('Por favor selecciona tu Grado de Educación Media (10° o 11°).');
+        alert('Por favor selecciona el Programa de Formación SENA.');
       }
-      const elGrado = document.getElementById('quiz-input-grado');
-      if (elGrado) elGrado.focus();
+      const elProg = document.getElementById('quiz-select-programa') || document.getElementById('quiz-input-programa');
+      if (elProg) elProg.focus();
       return false;
     }
 

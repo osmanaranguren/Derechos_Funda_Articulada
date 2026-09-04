@@ -113,6 +113,9 @@ class AppController {
       if (window.authManager) window.authManager.updateAuthBadge();
       if (window.recordsManager) window.recordsManager.loadRecords();
     }
+    if (viewName === 'quiz') {
+      if (window.institucionesSelector) window.institucionesSelector.init();
+    }
     if (viewName === 'slides') {
       this.renderSlide(this.currentSlideIndex);
     }
