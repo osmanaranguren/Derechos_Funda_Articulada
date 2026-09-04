@@ -1,7 +1,7 @@
 -- ========================================================
 -- SCRIPT DE ACTUALIZACIÓN Y COMPATIBILIDAD SUPABASE
 -- Plataforma SENA: Derechos Fundamentales en el Trabajo
--- Programa: Articulación con la Media (Colegios 10° y 11°)
+-- Programa: Articulación con la Media (Colegios Grado 11°)
 -- Tabla: evaluaciones_articulada
 -- ========================================================
 

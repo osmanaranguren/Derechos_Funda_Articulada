@@ -1,6 +1,6 @@
 /**
  * CONTROLADOR DE SELECTORES VINCULADOS DE INSTITUCIONES EDUCATIVAS
- * Articulación SENA CIMM con la Educación Media (Colegios 10° y 11°)
+ * Articulación SENA CIMM con la Educación Media (Colegios Grado 11°)
  * Vincula inteligentemente: Municipio, Colegio, Programa de Formación y Ficha.
  */
 
