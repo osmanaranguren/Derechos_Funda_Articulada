@@ -478,52 +478,119 @@
           class="hidden max-w-md mx-auto p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold mb-4">
         </div>
 
-        <div class="max-w-xl mx-auto space-y-4 text-left mb-8"
+        <div class="max-w-2xl mx-auto space-y-4 text-left mb-8"
           onkeydown="if(event.key === 'Enter') document.getElementById('btn-start-quiz').click()">
-          <div>
-            <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Nombre Completo del
-              Estudiante / Aprendiz *</label>
-            <input type="text" id="quiz-input-name" placeholder="Ej: Juan Pérez Morales"
-              class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
-          </div>
-
+          
+          <!-- Datos Personales del Estudiante -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">No. Documento / Cédula / T.I.
-                *</label>
+              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Nombre Completo del Estudiante / Aprendiz *</label>
+              <input type="text" id="quiz-input-name" placeholder="Ej: Juan Pérez Morales"
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">No. Documento / Cédula / T.I. *</label>
               <input type="text" id="quiz-input-doc" placeholder="Ej: 1020304050"
                 class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold font-mono">
             </div>
-
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">No. Ficha SENA
-                *</label>
-              <input type="text" id="quiz-input-ficha" placeholder="Ej: 2825641"
-                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold font-mono">
-            </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Institución Educativa (Colegio en Convenio) *</label>
-            <input type="text" id="quiz-input-colegio" placeholder="Ej: Institución Educativa Técnico Industrial"
-              class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Municipio / Sede *</label>
-              <input type="text" id="quiz-input-municipio" placeholder="Ej: Duitama, Sogamoso, Tunja..."
-                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
+          <!-- BLOQUE DE ARTICULACIÓN CON LA MEDIA: SELECTORES VINCULADOS -->
+          <div class="p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-900/60 border-2 border-emerald-500/20 space-y-4 shadow-sm">
+            <div class="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-200 dark:border-slate-700/60">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🏛️</span>
+                <div>
+                  <h4 class="text-xs font-black uppercase text-slate-900 dark:text-white">Convenio Articulación con la Media (SENA CIMM)</h4>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400">Selecciona tu Ficha o busca por Municipio / Colegio (los campos se autocompletan)</p>
+                </div>
+              </div>
+              <button id="btn-toggle-manual-institution" type="button" class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer">
+                <span>✍️ ¿No encuentras tu colegio? Ingresar manualmente</span>
+              </button>
             </div>
 
-            <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Grado Escolar *</label>
-              <select id="quiz-input-grado"
-                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
-                <option value="">Selecciona el grado...</option>
-                <option value="10°">Grado 10° (Décimo)</option>
-                <option value="11°">Grado 11° (Once)</option>
-              </select>
+            <!-- Contenedor Modo Selectores Inteligentes -->
+            <div id="container-institution-selectors" class="space-y-3">
+              <!-- Selector 1: Búsqueda rápida por Ficha SENA -->
+              <div>
+                <label class="block text-[11px] font-bold uppercase text-emerald-700 dark:text-emerald-400 mb-1">⚡ Selección Rápida por No. de Ficha SENA *</label>
+                <select id="quiz-select-ficha"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border-2 border-emerald-500/40 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-bold font-mono">
+                  <option value="">-- Cargar Ficha SENA (95 Convenios Oficiales) --</option>
+                </select>
+              </div>
+
+              <!-- Selectores Cascada: Municipio y Colegio -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">📍 Municipio / Sede *</label>
+                  <select id="quiz-select-municipio"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-semibold">
+                    <option value="">-- Selecciona Municipio --</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">🏫 Institución Educativa (Colegio) *</label>
+                  <select id="quiz-select-colegio"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-semibold">
+                    <option value="">-- Selecciona Colegio --</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Selectores Cascada: Programa y Grado -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="sm:col-span-2">
+                  <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">💻 Programa de Formación SENA *</label>
+                  <select id="quiz-select-programa"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-semibold">
+                    <option value="">-- Selecciona Programa --</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">🎓 Grado Escolar *</label>
+                  <select id="quiz-input-grado"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-bold">
+                    <option value="11°">Grado 11° (Once)</option>
+                    <option value="10°">Grado 10° (Décimo)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Vista previa de confirmación de convenio -->
+              <div id="quiz-institucion-preview" class="hidden"></div>
+            </div>
+
+            <!-- Contenedor Modo Manual (Alternativo) -->
+            <div id="container-institution-manual" class="hidden space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">No. Ficha SENA *</label>
+                  <input type="text" id="quiz-input-ficha" placeholder="Ej: 3145800"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-mono font-semibold">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Municipio / Sede *</label>
+                  <input type="text" id="quiz-input-municipio" placeholder="Ej: Duitama"
+                    class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-semibold">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Institución Educativa (Colegio) *</label>
+                <input type="text" id="quiz-input-colegio" placeholder="Ej: I.E. Técnica..."
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-semibold">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Programa de Formación SENA *</label>
+                <input type="text" id="quiz-input-programa" placeholder="Ej: Programación de Software"
+                  class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-xs font-semibold">
+              </div>
             </div>
           </div>
         </div>
@@ -644,10 +711,22 @@
             <option value="ALL">Todas las Fichas</option>
           </select>
 
+          <!-- Selector de Municipio -->
+          <select id="records-filter-municipio" onchange="window.recordsManager.setMunicipioFilter(this.value)"
+            class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white focus:outline-none max-w-[180px]">
+            <option value="ALL">Todos los Municipios</option>
+          </select>
+
           <!-- Selector de Colegio -->
           <select id="records-filter-colegio" onchange="window.recordsManager.setColegioFilter(this.value)"
-            class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white focus:outline-none max-w-[220px]">
+            class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white focus:outline-none max-w-[200px]">
             <option value="ALL">Todos los Colegios</option>
+          </select>
+
+          <!-- Selector de Programa -->
+          <select id="records-filter-programa" onchange="window.recordsManager.setProgramaFilter(this.value)"
+            class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white focus:outline-none max-w-[200px]">
+            <option value="ALL">Todos los Programas</option>
           </select>
 
           <!-- Selector de Grado -->
@@ -668,7 +747,7 @@
 
           <!-- Input de Búsqueda -->
           <input type="text" id="records-search-input" oninput="window.recordsManager.setSearchFilter(this.value)"
-            placeholder="Buscar por nombre, documento, ficha o colegio..."
+            placeholder="Buscar por nombre, documento, ficha, colegio o programa..."
             class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white focus:outline-none w-64">
         </div>
 
@@ -991,15 +1070,17 @@
   </footer>
 
   <!-- Scripts del Proyecto con Cache Busting -->
-  <script src="js/data.js?v=5.1"></script>
-  <script src="js/audio.js?v=5.1"></script>
-  <script src="js/confetti.js?v=5.1"></script>
-  <script src="js/auth.js?v=5.1"></script>
-  <script src="js/supabase-credentials.js?v=5.1"></script>
-  <script src="js/supabase-config.js?v=5.1"></script>
-  <script src="js/quiz.js?v=5.1"></script>
-  <script src="js/records.js?v=5.1"></script>
-  <script src="js/app.js?v=5.1"></script>
+  <script src="js/instituciones-data.js?v=5.2"></script>
+  <script src="js/instituciones-selector.js?v=5.2"></script>
+  <script src="js/data.js?v=5.2"></script>
+  <script src="js/audio.js?v=5.2"></script>
+  <script src="js/confetti.js?v=5.2"></script>
+  <script src="js/auth.js?v=5.2"></script>
+  <script src="js/supabase-credentials.js?v=5.2"></script>
+  <script src="js/supabase-config.js?v=5.2"></script>
+  <script src="js/quiz.js?v=5.2"></script>
+  <script src="js/records.js?v=5.2"></script>
+  <script src="js/app.js?v=5.2"></script>
 </body>
 
 </html>

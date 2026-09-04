@@ -8,7 +8,9 @@ class RecordsManager {
     this.records = [];
     this.filteredRecords = [];
     this.currentFilterFicha = 'ALL';
+    this.currentFilterMunicipio = 'ALL';
     this.currentFilterColegio = 'ALL';
+    this.currentFilterPrograma = 'ALL';
     this.currentFilterGrado = 'ALL';
     this.currentFilterSofia = 'ALL';
     this.currentSearch = '';
@@ -47,7 +49,9 @@ class RecordsManager {
       }
 
       this.populateFichaDropdown();
+      this.populateMunicipioDropdown();
       this.populateColegioDropdown();
+      this.populateProgramaDropdown();
       this.applyFilters();
       this.updateStats();
     } catch (e) {
@@ -75,12 +79,32 @@ class RecordsManager {
     }
   }
 
+  populateMunicipioDropdown() {
+    const select = document.getElementById('records-filter-municipio');
+    if (!select) return;
+
+    const municipios = Array.from(new Set(this.records.map(r => String(r.municipio || '').trim()).filter(Boolean)));
+    municipios.sort((a, b) => a.localeCompare(b, 'es'));
+
+    select.innerHTML = `
+      <option value="ALL">Todos los Municipios (${this.records.length})</option>
+      ${municipios.map(m => `<option value="${m}">${m}</option>`).join('')}
+    `;
+
+    if (municipios.includes(this.currentFilterMunicipio)) {
+      select.value = this.currentFilterMunicipio;
+    } else {
+      this.currentFilterMunicipio = 'ALL';
+      select.value = 'ALL';
+    }
+  }
+
   populateColegioDropdown() {
     const select = document.getElementById('records-filter-colegio');
     if (!select) return;
 
     const colegios = Array.from(new Set(this.records.map(r => String(r.colegio || '').trim()).filter(Boolean)));
-    colegios.sort();
+    colegios.sort((a, b) => a.localeCompare(b, 'es'));
 
     select.innerHTML = `
       <option value="ALL">Todos los Colegios (${this.records.length})</option>
@@ -95,13 +119,43 @@ class RecordsManager {
     }
   }
 
+  populateProgramaDropdown() {
+    const select = document.getElementById('records-filter-programa');
+    if (!select) return;
+
+    const programas = Array.from(new Set(this.records.map(r => String(r.programa || '').trim()).filter(Boolean)));
+    programas.sort((a, b) => a.localeCompare(b, 'es'));
+
+    select.innerHTML = `
+      <option value="ALL">Todos los Programas (${this.records.length})</option>
+      ${programas.map(p => `<option value="${p}">${p}</option>`).join('')}
+    `;
+
+    if (programas.includes(this.currentFilterPrograma)) {
+      select.value = this.currentFilterPrograma;
+    } else {
+      this.currentFilterPrograma = 'ALL';
+      select.value = 'ALL';
+    }
+  }
+
   setFichaFilter(ficha) {
     this.currentFilterFicha = ficha;
     this.applyFilters();
   }
 
+  setMunicipioFilter(municipio) {
+    this.currentFilterMunicipio = municipio || 'ALL';
+    this.applyFilters();
+  }
+
   setColegioFilter(colegio) {
     this.currentFilterColegio = colegio || 'ALL';
+    this.applyFilters();
+  }
+
+  setProgramaFilter(programa) {
+    this.currentFilterPrograma = programa || 'ALL';
     this.applyFilters();
   }
 
@@ -123,19 +177,22 @@ class RecordsManager {
   applyFilters() {
     this.filteredRecords = this.records.filter(r => {
       const matchFicha = this.currentFilterFicha === 'ALL' || String(r.ficha).trim() === this.currentFilterFicha;
+      const matchMunicipio = this.currentFilterMunicipio === 'ALL' || String(r.municipio || '').trim() === this.currentFilterMunicipio;
       const matchColegio = this.currentFilterColegio === 'ALL' || String(r.colegio || '').trim() === this.currentFilterColegio;
+      const matchPrograma = this.currentFilterPrograma === 'ALL' || String(r.programa || '').trim() === this.currentFilterPrograma;
       const matchGrado = this.currentFilterGrado === 'ALL' || String(r.grado || '').trim() === this.currentFilterGrado;
       const matchSearch = !this.currentSearch || 
         (r.nombre && r.nombre.toLowerCase().includes(this.currentSearch)) ||
         (r.documento && r.documento.toLowerCase().includes(this.currentSearch)) ||
         (r.ficha && String(r.ficha).includes(this.currentSearch)) ||
         (r.colegio && r.colegio.toLowerCase().includes(this.currentSearch)) ||
-        (r.municipio && r.municipio.toLowerCase().includes(this.currentSearch));
+        (r.municipio && r.municipio.toLowerCase().includes(this.currentSearch)) ||
+        (r.programa && r.programa.toLowerCase().includes(this.currentSearch));
       const matchSofia = this.currentFilterSofia === 'ALL' ||
         (this.currentFilterSofia === 'CALIFICADO' && !!r.calificado_sofia) ||
         (this.currentFilterSofia === 'PENDIENTE' && !r.calificado_sofia);
 
-      return matchFicha && matchColegio && matchGrado && matchSearch && matchSofia;
+      return matchFicha && matchMunicipio && matchColegio && matchPrograma && matchGrado && matchSearch && matchSofia;
     });
 
     this.renderTable();
@@ -193,10 +250,11 @@ class RecordsManager {
         </td>
         <td class="py-3.5 px-4">
           <div class="font-bold text-slate-800 dark:text-white text-xs leading-tight">${r.colegio || 'Institución en Convenio'}</div>
-          <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
-            ${r.grado ? `<span class="px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20 font-bold">${r.grado}</span>` : ''}
+          <div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+            ${r.grado ? `<span class="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-700 font-bold">${r.grado}</span>` : ''}
             ${r.municipio ? `<span class="text-slate-400 font-normal">📍 ${r.municipio}</span>` : ''}
           </div>
+          ${r.programa ? `<div class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">💻 ${r.programa}</div>` : ''}
         </td>
         <td class="py-3.5 px-4">
           <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-xs border border-slate-200 dark:border-slate-700">
@@ -439,9 +497,15 @@ class RecordsManager {
         </h2>
 
         <!-- Mención de Articulación y Colegio -->
-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/10 dark:bg-slate-800 border border-emerald-500/20 text-xs font-semibold mb-6 max-w-xl mx-auto text-emerald-800 dark:text-emerald-300">
-          <span>🏫</span>
-          <span>En articulación con: <strong>${record.colegio || 'Institución Educativa en Convenio'}</strong> ${record.grado ? `• Grado ${record.grado}` : ''} ${record.municipio ? `• ${record.municipio}` : ''}</span>
+        <div class="flex flex-col items-center justify-center gap-1.5 px-5 py-3 rounded-2xl bg-emerald-500/10 dark:bg-slate-800 border border-emerald-500/25 text-xs font-semibold mb-6 max-w-xl mx-auto text-emerald-900 dark:text-emerald-300 shadow-sm">
+          <div>
+            <span>🏫</span> En articulación con: <strong>${record.colegio || 'Institución Educativa en Convenio'}</strong> ${record.grado ? `• Grado ${record.grado}` : ''} ${record.municipio ? `• ${record.municipio}` : ''}
+          </div>
+          ${record.programa ? `
+            <div class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-white/70 dark:bg-slate-900/60 px-3 py-1 rounded-lg border border-emerald-500/20">
+              💻 Programa de Formación Técnica: ${record.programa}
+            </div>
+          ` : ''}
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-2xl mx-auto p-4 rounded-2xl bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 mb-6 text-xs">
@@ -467,23 +531,23 @@ class RecordsManager {
           </div>
         </div>
 
-        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-6 border ${
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-4 border ${
           record.calificado_sofia 
             ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' 
             : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
         }">
-          <span>${record.calificado_sofia ? '✅' : '⏳'}</span>
-          <span>SOFIA PLUS: <strong>${record.calificado_sofia ? 'Calificado en Sistema' : 'Pendiente de Registro'}</strong></span>
+          <span>${record.calificado_sofia ? '✓ Reportado en SOFIA PLUS' : '⏳ Pendiente Registro en SOFIA PLUS'}</span>
         </div>
 
-        <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 max-w-xl mx-auto leading-relaxed mb-10">
-          Aprobó satisfactoriamente la evaluación de conocimientos fundamentales sobre Derechos Humanos, Declaración Universal de 1948, Generaciones de Derechos y los Artículos 25 y 53 de la Constitución Política de Colombia.
+        <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 max-w-xl mx-auto leading-relaxed mb-6">
+          Aprobó satisfactoriamente la evaluación de conocimientos sobre Derechos Humanos, Declaración Universal de 1948, Clasificación de Derechos y los Artículos 25 y 53 de la Constitución Política de Colombia en articulación con la educación media.
         </p>
 
-        <!-- Pie de Constancia (Limpio, sin mención de certificación de competencia laboral ni instructora) -->
+        <!-- Pie de Constancia con Sello SENA Aprobado -->
         <div class="flex items-center justify-between gap-6 pt-6 border-t border-slate-200 dark:border-slate-700 text-left">
           <div class="w-1/3">
-            <span class="text-[10px] text-slate-400 font-mono block">Documento de validación interna</span>
+            <p class="font-bold text-slate-700 dark:text-slate-300 text-xs">Instructor Evaluador</p>
+            <p class="text-[10px] text-slate-400">Regional Boyacá - CIMM</p>
           </div>
 
           <div class="text-center w-1/3 flex justify-center">
@@ -499,6 +563,7 @@ class RecordsManager {
             <span>${certDate}</span>
           </div>
         </div>
+
       </div>
     `;
 
@@ -522,7 +587,7 @@ class RecordsManager {
       return;
     }
 
-    const headers = ['ID', 'Estudiante / Aprendiz', 'Documento', 'No. Ficha', 'Institución Educativa', 'Municipio', 'Grado', 'Intento', 'Puntaje', 'Total Preguntas', 'Porcentaje', 'Estado', 'Calificado SOFIA PLUS', 'Calificado Por', 'Fecha Calificación SOFIA', 'Tiempo', 'Fecha'];
+    const headers = ['ID', 'Estudiante / Aprendiz', 'Documento', 'No. Ficha', 'Institución Educativa', 'Municipio', 'Programa de Formación', 'Grado', 'Intento', 'Puntaje', 'Total Preguntas', 'Porcentaje', 'Estado', 'Calificado SOFIA PLUS', 'Calificado Por', 'Fecha Calificación SOFIA', 'Tiempo', 'Fecha'];
     const rows = this.filteredRecords.map(r => [
       `"${r.id || ''}"`,
       `"${(r.nombre || '').replace(/"/g, '""')}"`,
@@ -530,6 +595,7 @@ class RecordsManager {
       `"${r.ficha || ''}"`,
       `"${(r.colegio || '').replace(/"/g, '""')}"`,
       `"${(r.municipio || '').replace(/"/g, '""')}"`,
+      `"${(r.programa || '').replace(/"/g, '""')}"`,
       `"${r.grado || ''}"`,
       r.intento || 1,
       r.puntaje,

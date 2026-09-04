@@ -13,7 +13,8 @@ class QuizEngine {
       ficha: '',
       colegio: '',
       municipio: '',
-      grado: ''
+      grado: '',
+      programa: ''
     };
     this.timerSeconds = 0;
     this.timerInterval = null;
@@ -415,7 +416,7 @@ class QuizEngine {
     };
   }
 
-  async startQuiz(nombre, documento, ficha, colegio, municipio, grado) {
+  async startQuiz(nombre, documento, ficha, colegio, municipio, grado, programa) {
     if (typeof nombre !== 'string' || !nombre.trim()) {
       const elName = document.getElementById('quiz-input-name');
       nombre = elName ? elName.value : '';
@@ -425,20 +426,29 @@ class QuizEngine {
       documento = elDoc ? elDoc.value : '';
     }
     if (typeof ficha !== 'string' || !ficha.trim()) {
-      const elFicha = document.getElementById('quiz-input-ficha');
+      const elFicha = document.getElementById('quiz-input-ficha') || document.getElementById('quiz-select-ficha');
       ficha = elFicha ? elFicha.value : '';
     }
     if (typeof colegio !== 'string' || !colegio.trim()) {
-      const elColegio = document.getElementById('quiz-input-colegio');
+      const elColegio = document.getElementById('quiz-input-colegio') || document.getElementById('quiz-select-colegio');
       colegio = elColegio ? elColegio.value : '';
     }
     if (typeof municipio !== 'string' || !municipio.trim()) {
-      const elMun = document.getElementById('quiz-input-municipio');
+      const elMun = document.getElementById('quiz-input-municipio') || document.getElementById('quiz-select-municipio');
       municipio = elMun ? elMun.value : '';
     }
     if (typeof grado !== 'string' || !grado.trim()) {
       const elGrado = document.getElementById('quiz-input-grado');
       grado = elGrado ? elGrado.value : '';
+    }
+    if (typeof programa !== 'string' || !programa.trim()) {
+      const elProg = document.getElementById('quiz-input-programa') || document.getElementById('quiz-select-programa');
+      programa = elProg ? elProg.value : '';
+      // Si aún no está definido, intentar deducirlo de la ficha oficial
+      if (!programa && ficha && window.INSTITUCIONES_ARTICULADA) {
+        const item = window.INSTITUCIONES_ARTICULADA.find(d => String(d.ficha) === String(ficha.trim()));
+        if (item && item.programa) programa = item.programa;
+      }
     }
 
     const errorEl = document.getElementById('quiz-setup-error');
@@ -470,36 +480,36 @@ class QuizEngine {
 
     if (!ficha || !ficha.trim()) {
       if (errorEl) {
-        errorEl.textContent = '⚠️ Por favor ingresa el Número de Ficha SENA.';
+        errorEl.textContent = '⚠️ Por favor selecciona o ingresa el Número de Ficha SENA.';
         errorEl.classList.remove('hidden');
       } else {
-        alert('Por favor ingresa el Número de Ficha SENA.');
+        alert('Por favor selecciona o ingresa el Número de Ficha SENA.');
       }
-      const elFicha = document.getElementById('quiz-input-ficha');
+      const elFicha = document.getElementById('quiz-select-ficha') || document.getElementById('quiz-input-ficha');
       if (elFicha) elFicha.focus();
       return false;
     }
 
     if (!colegio || !colegio.trim()) {
       if (errorEl) {
-        errorEl.textContent = '⚠️ Por favor ingresa el nombre de la Institución Educativa (Colegio en Convenio).';
+        errorEl.textContent = '⚠️ Por favor selecciona o ingresa el nombre de la Institución Educativa (Colegio en Convenio).';
         errorEl.classList.remove('hidden');
       } else {
-        alert('Por favor ingresa el nombre de la Institución Educativa.');
+        alert('Por favor selecciona o ingresa el nombre de la Institución Educativa.');
       }
-      const elColegio = document.getElementById('quiz-input-colegio');
+      const elColegio = document.getElementById('quiz-select-colegio') || document.getElementById('quiz-input-colegio');
       if (elColegio) elColegio.focus();
       return false;
     }
 
     if (!municipio || !municipio.trim()) {
       if (errorEl) {
-        errorEl.textContent = '⚠️ Por favor ingresa el Municipio o Sede de la institución.';
+        errorEl.textContent = '⚠️ Por favor selecciona o ingresa el Municipio o Sede de la institución.';
         errorEl.classList.remove('hidden');
       } else {
-        alert('Por favor ingresa el Municipio o Sede de la institución.');
+        alert('Por favor selecciona o ingresa el Municipio o Sede de la institución.');
       }
-      const elMun = document.getElementById('quiz-input-municipio');
+      const elMun = document.getElementById('quiz-select-municipio') || document.getElementById('quiz-input-municipio');
       if (elMun) elMun.focus();
       return false;
     }
@@ -594,7 +604,8 @@ class QuizEngine {
       ficha: ficha.trim(),
       colegio: colegio.trim(),
       municipio: municipio.trim(),
-      grado: grado.trim()
+      grado: grado.trim(),
+      programa: (programa || '').trim()
     };
 
     // Asegurar carga de preguntas
@@ -885,6 +896,7 @@ class QuizEngine {
       colegio: this.apprentice.colegio || '',
       municipio: this.apprentice.municipio || '',
       grado: this.apprentice.grado || '',
+      programa: this.apprentice.programa || '',
       intento: intentoActual,
       totalIntentos: 2,
       puntaje: score,
@@ -1083,9 +1095,9 @@ class QuizEngine {
           ${record.municipio ? `<span class="text-xs text-slate-400">${record.municipio}</span>` : ''}
         </div>
         <div>
-          <span class="text-xs font-bold text-slate-400 uppercase block">Grado / Fecha:</span>
-          <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">${record.grado ? `Grado ${record.grado}` : 'Educación Media'}</p>
-          <span class="text-xs text-slate-400">${record.fecha}</span>
+          <span class="text-xs font-bold text-slate-400 uppercase block">Programa SENA / Grado:</span>
+          <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">${record.programa || 'Educación Media Técnica'}</p>
+          <span class="text-xs text-slate-400">${record.grado ? `Grado ${record.grado}` : 'Media'} • ${record.fecha}</span>
         </div>
         <div>
           <span class="text-xs font-bold text-slate-400 uppercase block">Estado SOFIA PLUS:</span>
@@ -1237,6 +1249,7 @@ class QuizEngine {
       const elColegio = document.getElementById('quiz-input-colegio');
       const elMun = document.getElementById('quiz-input-municipio');
       const elGrado = document.getElementById('quiz-input-grado');
+      const elProg = document.getElementById('quiz-input-programa');
 
       if (elName && this.apprentice.nombre) elName.value = this.apprentice.nombre;
       if (elDoc && this.apprentice.documento) elDoc.value = this.apprentice.documento;
@@ -1244,6 +1257,15 @@ class QuizEngine {
       if (elColegio && this.apprentice.colegio) elColegio.value = this.apprentice.colegio;
       if (elMun && this.apprentice.municipio) elMun.value = this.apprentice.municipio;
       if (elGrado && this.apprentice.grado) elGrado.value = this.apprentice.grado;
+      if (elProg && this.apprentice.programa) elProg.value = this.apprentice.programa;
+
+      // Si el selector oficial está disponible, re-aplicar selección
+      if (window.institucionesSelector && this.apprentice.ficha) {
+        const item = (window.INSTITUCIONES_ARTICULADA || []).find(d => String(d.ficha) === String(this.apprentice.ficha));
+        if (item) {
+          window.institucionesSelector.applySelection(item);
+        }
+      }
     }
 
     if (errorEl) {

@@ -178,6 +178,7 @@ const SupabaseManager = {
             colegio: record.colegio || '',
             municipio: record.municipio || '',
             grado: record.grado || '',
+            programa: record.programa || '',
             intento: Number(record.intento || 1),
             puntaje: Number(record.puntaje),
             total_preguntas: Number(record.totalPreguntas),
@@ -206,6 +207,7 @@ const SupabaseManager = {
             if (error.message.includes('colegio')) delete fallbackPayload.colegio;
             if (error.message.includes('municipio')) delete fallbackPayload.municipio;
             if (error.message.includes('grado')) delete fallbackPayload.grado;
+            if (error.message.includes('programa')) delete fallbackPayload.programa;
             if (error.message.includes('intento')) delete fallbackPayload.intento;
             if (error.message.includes('calificado_sofia')) delete fallbackPayload.calificado_sofia;
             if (error.message.includes('calificado_sofia_por')) delete fallbackPayload.calificado_sofia_por;
@@ -274,6 +276,7 @@ const SupabaseManager = {
               colegio: item.colegio || '',
               municipio: item.municipio || '',
               grado: item.grado || '',
+              programa: item.programa || '',
               intento: item.intento || 1,
               puntaje: item.puntaje,
               totalPreguntas: item.total_preguntas || 10,
