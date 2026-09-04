@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SENA | Derechos Fundamentales en el Trabajo - Competencia 210201501</title>
+  <title>SENA Articulación con la Media | Derechos Fundamentales en el Trabajo</title>
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -48,11 +48,16 @@
         <div class="flex items-center gap-3 cursor-pointer" onclick="window.app.navigateTo('home')">
           <img src="sena-logo.png" alt="Logo SENA" class="w-10 h-10 object-contain bg-white dark:bg-slate-800 rounded-xl p-1 shadow-md shadow-emerald-500/10 border border-emerald-500/20">
           <div>
-            <span class="text-base font-black tracking-tight text-slate-900 dark:text-white block leading-tight">
-              Derechos Fundamentales
-            </span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-base font-black tracking-tight text-slate-900 dark:text-white block leading-tight">
+                Derechos Fundamentales
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+                Articulación
+              </span>
+            </div>
             <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-              COMPETENCIA 210201501
+              COLEGIOS (10° Y 11°) • COMPETENCIA 210201501
             </span>
           </div>
         </div>
@@ -145,7 +150,7 @@
         <div class="relative z-10 max-w-3xl">
           <div
             class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-black uppercase tracking-wider mb-6">
-            <span>🇨🇴</span> Programa de Formación Integral SENA
+            <span>🇨🇴</span> Convenio SENA - Articulación con la Media Técnica (Grados 10° y 11°)
           </div>
 
           <h1 class="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight mb-4">
@@ -473,28 +478,52 @@
           class="hidden max-w-md mx-auto p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold mb-4">
         </div>
 
-        <div class="max-w-md mx-auto space-y-4 text-left mb-8"
+        <div class="max-w-xl mx-auto space-y-4 text-left mb-8"
           onkeydown="if(event.key === 'Enter') document.getElementById('btn-start-quiz').click()">
           <div>
             <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Nombre Completo del
-              Aprendiz *</label>
+              Estudiante / Aprendiz *</label>
             <input type="text" id="quiz-input-name" placeholder="Ej: Juan Pérez Morales"
               class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">No. Documento / Cédula / T.I.
+                *</label>
+              <input type="text" id="quiz-input-doc" placeholder="Ej: 1020304050"
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold font-mono">
+            </div>
+
+            <div>
               <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">No. Ficha SENA
                 *</label>
               <input type="text" id="quiz-input-ficha" placeholder="Ej: 2825641"
                 class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold font-mono">
             </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Institución Educativa (Colegio en Convenio) *</label>
+            <input type="text" id="quiz-input-colegio" placeholder="Ej: Institución Educativa Técnico Industrial"
+              class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Municipio / Sede *</label>
+              <input type="text" id="quiz-input-municipio" placeholder="Ej: Duitama, Sogamoso, Tunja..."
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
+            </div>
 
             <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">No. Documento / Cédula
-                *</label>
-              <input type="text" id="quiz-input-doc" placeholder="Ej: 1020304050"
-                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold font-mono">
+              <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-1">Grado Escolar *</label>
+              <select id="quiz-input-grado"
+                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-semibold">
+                <option value="">Selecciona el grado...</option>
+                <option value="10°">Grado 10° (Décimo)</option>
+                <option value="11°">Grado 11° (Once)</option>
+              </select>
             </div>
           </div>
         </div>
@@ -615,6 +644,20 @@
             <option value="ALL">Todas las Fichas</option>
           </select>
 
+          <!-- Selector de Colegio -->
+          <select id="records-filter-colegio" onchange="window.recordsManager.setColegioFilter(this.value)"
+            class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white focus:outline-none max-w-[220px]">
+            <option value="ALL">Todos los Colegios</option>
+          </select>
+
+          <!-- Selector de Grado -->
+          <select id="records-filter-grado" onchange="window.recordsManager.setGradoFilter(this.value)"
+            class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white focus:outline-none">
+            <option value="ALL">Todos los Grados</option>
+            <option value="10°">Grado 10°</option>
+            <option value="11°">Grado 11°</option>
+          </select>
+
           <!-- Filtro SOFIA PLUS -->
           <select id="records-filter-sofia" onchange="window.recordsManager.setSofiaFilter(this.value)"
             class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-white focus:outline-none">
@@ -625,7 +668,7 @@
 
           <!-- Input de Búsqueda -->
           <input type="text" id="records-search-input" oninput="window.recordsManager.setSearchFilter(this.value)"
-            placeholder="Buscar por nombre, documento o ficha..."
+            placeholder="Buscar por nombre, documento, ficha o colegio..."
             class="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-white focus:outline-none w-64">
         </div>
 
@@ -652,6 +695,7 @@
               class="border-b border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/50 text-[11px] font-black uppercase text-slate-400 tracking-wider">
               <th class="py-3.5 px-4">#</th>
               <th class="py-3.5 px-4">Aprendiz</th>
+              <th class="py-3.5 px-4">Institución & Grado</th>
               <th class="py-3.5 px-4">No. Ficha</th>
               <th class="py-3.5 px-4 text-center">Intento</th>
               <th class="py-3.5 px-4 text-center">Puntaje</th>
@@ -760,7 +804,7 @@
         </div>
         <p class="text-[11px] text-slate-500">
           Copia el script SQL para crear la tabla <code
-            class="font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded">evaluaciones_sena</code> y sus
+            class="font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded">evaluaciones_articulada</code> y sus
           políticas de acceso con 1 clic.
         </p>
       </div>

@@ -8,6 +8,8 @@ class RecordsManager {
     this.records = [];
     this.filteredRecords = [];
     this.currentFilterFicha = 'ALL';
+    this.currentFilterColegio = 'ALL';
+    this.currentFilterGrado = 'ALL';
     this.currentFilterSofia = 'ALL';
     this.currentSearch = '';
     this.currentSource = 'local';
@@ -20,7 +22,7 @@ class RecordsManager {
     if (listElem) {
       listElem.innerHTML = `
         <tr>
-          <td colspan="9" class="text-center py-8 text-slate-500">
+          <td colspan="10" class="text-center py-8 text-slate-500">
             <div class="inline-flex items-center gap-2">
               <span class="animate-spin text-xl">⏳</span> Cargando evaluaciones...
             </div>
@@ -45,6 +47,7 @@ class RecordsManager {
       }
 
       this.populateFichaDropdown();
+      this.populateColegioDropdown();
       this.applyFilters();
       this.updateStats();
     } catch (e) {
@@ -72,8 +75,38 @@ class RecordsManager {
     }
   }
 
+  populateColegioDropdown() {
+    const select = document.getElementById('records-filter-colegio');
+    if (!select) return;
+
+    const colegios = Array.from(new Set(this.records.map(r => String(r.colegio || '').trim()).filter(Boolean)));
+    colegios.sort();
+
+    select.innerHTML = `
+      <option value="ALL">Todos los Colegios (${this.records.length})</option>
+      ${colegios.map(c => `<option value="${c}">${c}</option>`).join('')}
+    `;
+
+    if (colegios.includes(this.currentFilterColegio)) {
+      select.value = this.currentFilterColegio;
+    } else {
+      this.currentFilterColegio = 'ALL';
+      select.value = 'ALL';
+    }
+  }
+
   setFichaFilter(ficha) {
     this.currentFilterFicha = ficha;
+    this.applyFilters();
+  }
+
+  setColegioFilter(colegio) {
+    this.currentFilterColegio = colegio || 'ALL';
+    this.applyFilters();
+  }
+
+  setGradoFilter(grado) {
+    this.currentFilterGrado = grado || 'ALL';
     this.applyFilters();
   }
 
@@ -90,15 +123,19 @@ class RecordsManager {
   applyFilters() {
     this.filteredRecords = this.records.filter(r => {
       const matchFicha = this.currentFilterFicha === 'ALL' || String(r.ficha).trim() === this.currentFilterFicha;
+      const matchColegio = this.currentFilterColegio === 'ALL' || String(r.colegio || '').trim() === this.currentFilterColegio;
+      const matchGrado = this.currentFilterGrado === 'ALL' || String(r.grado || '').trim() === this.currentFilterGrado;
       const matchSearch = !this.currentSearch || 
         (r.nombre && r.nombre.toLowerCase().includes(this.currentSearch)) ||
         (r.documento && r.documento.toLowerCase().includes(this.currentSearch)) ||
-        (r.ficha && String(r.ficha).includes(this.currentSearch));
+        (r.ficha && String(r.ficha).includes(this.currentSearch)) ||
+        (r.colegio && r.colegio.toLowerCase().includes(this.currentSearch)) ||
+        (r.municipio && r.municipio.toLowerCase().includes(this.currentSearch));
       const matchSofia = this.currentFilterSofia === 'ALL' ||
         (this.currentFilterSofia === 'CALIFICADO' && !!r.calificado_sofia) ||
         (this.currentFilterSofia === 'PENDIENTE' && !r.calificado_sofia);
 
-      return matchFicha && matchSearch && matchSofia;
+      return matchFicha && matchColegio && matchGrado && matchSearch && matchSofia;
     });
 
     this.renderTable();
@@ -133,7 +170,7 @@ class RecordsManager {
     if (this.filteredRecords.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9" class="text-center py-12 text-slate-400">
+          <td colspan="10" class="text-center py-12 text-slate-400">
             <div class="flex flex-col items-center justify-center gap-2">
               <span class="text-3xl">📋</span>
               <p class="font-medium text-sm">No se encontraron evaluaciones registradas con los filtros actuales.</p>
@@ -153,6 +190,13 @@ class RecordsManager {
         <td class="py-3.5 px-4">
           <div class="font-bold text-slate-800 dark:text-white text-sm">${r.nombre}</div>
           ${r.documento ? `<div class="text-xs text-slate-400 font-mono">ID: ${r.documento}</div>` : ''}
+        </td>
+        <td class="py-3.5 px-4">
+          <div class="font-bold text-slate-800 dark:text-white text-xs leading-tight">${r.colegio || 'Institución en Convenio'}</div>
+          <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
+            ${r.grado ? `<span class="px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20 font-bold">${r.grado}</span>` : ''}
+            ${r.municipio ? `<span class="text-slate-400 font-normal">📍 ${r.municipio}</span>` : ''}
+          </div>
         </td>
         <td class="py-3.5 px-4">
           <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-xs border border-slate-200 dark:border-slate-700">
@@ -303,7 +347,7 @@ class RecordsManager {
           `Error: ${deleteResult.error}\n\n` +
           `Causa común: Falta la política DELETE en Supabase.\n` +
           `Solución: En tu panel de Supabase > SQL Editor, ejecuta:\n\n` +
-          `CREATE POLICY "Permitir eliminacion anonima" ON public.evaluaciones_sena FOR DELETE TO anon, authenticated USING (true);`
+          `CREATE POLICY "Permitir eliminacion anonima articulada" ON public.evaluaciones_articulada FOR DELETE TO anon, authenticated USING (true);`
         );
       }
 
@@ -312,6 +356,7 @@ class RecordsManager {
       this.filteredRecords = this.filteredRecords.filter(r => String(r.id) !== String(id));
 
       this.populateFichaDropdown();
+      this.populateColegioDropdown();
       this.renderTable();
       this.updateStats();
 
@@ -389,21 +434,29 @@ class RecordsManager {
           Hace constar que el aprendiz(a):
         </p>
 
-        <h2 class="text-2xl md:text-3xl font-black text-emerald-700 dark:text-emerald-400 uppercase underline decoration-emerald-400 decoration-wavy underline-offset-8 mb-6">
+        <h2 class="text-2xl md:text-3xl font-black text-emerald-700 dark:text-emerald-400 uppercase underline decoration-emerald-400 decoration-wavy underline-offset-8 mb-4">
           ${record.nombre}
         </h2>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-xl mx-auto p-4 rounded-2xl bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 mb-6 text-xs">
+        <!-- Mención de Articulación y Colegio -->
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/10 dark:bg-slate-800 border border-emerald-500/20 text-xs font-semibold mb-6 max-w-xl mx-auto text-emerald-800 dark:text-emerald-300">
+          <span>🏫</span>
+          <span>En articulación con: <strong>${record.colegio || 'Institución Educativa en Convenio'}</strong> ${record.grado ? `• Grado ${record.grado}` : ''} ${record.municipio ? `• ${record.municipio}` : ''}</span>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-2xl mx-auto p-4 rounded-2xl bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 mb-6 text-xs">
           <div>
             <span class="text-slate-400 font-bold block uppercase text-[10px]">No. de Ficha:</span>
             <strong class="text-slate-800 dark:text-white text-sm font-mono">${record.ficha}</strong>
           </div>
-          ${record.documento ? `
-            <div>
-              <span class="text-slate-400 font-bold block uppercase text-[10px]">Documento:</span>
-              <strong class="text-slate-800 dark:text-white text-sm font-mono">${record.documento}</strong>
-            </div>
-          ` : ''}
+          <div>
+            <span class="text-slate-400 font-bold block uppercase text-[10px]">Documento / T.I.:</span>
+            <strong class="text-slate-800 dark:text-white text-sm font-mono">${record.documento || 'No reg.'}</strong>
+          </div>
+          <div>
+            <span class="text-slate-400 font-bold block uppercase text-[10px]">Grado:</span>
+            <strong class="text-emerald-700 dark:text-emerald-400 text-sm font-bold">${record.grado || 'Media'}</strong>
+          </div>
           <div>
             <span class="text-slate-400 font-bold block uppercase text-[10px]">Intento:</span>
             <strong class="text-slate-800 dark:text-white text-sm font-mono">${record.intento || 1} de 2</strong>
@@ -469,12 +522,15 @@ class RecordsManager {
       return;
     }
 
-    const headers = ['ID', 'Nombre Aprendiz', 'Documento', 'No. Ficha', 'Intento', 'Puntaje', 'Total Preguntas', 'Porcentaje', 'Estado', 'Calificado SOFIA PLUS', 'Calificado Por', 'Fecha Calificación SOFIA', 'Tiempo', 'Fecha'];
+    const headers = ['ID', 'Estudiante / Aprendiz', 'Documento', 'No. Ficha', 'Institución Educativa', 'Municipio', 'Grado', 'Intento', 'Puntaje', 'Total Preguntas', 'Porcentaje', 'Estado', 'Calificado SOFIA PLUS', 'Calificado Por', 'Fecha Calificación SOFIA', 'Tiempo', 'Fecha'];
     const rows = this.filteredRecords.map(r => [
       `"${r.id || ''}"`,
       `"${(r.nombre || '').replace(/"/g, '""')}"`,
       `"${r.documento || ''}"`,
       `"${r.ficha || ''}"`,
+      `"${(r.colegio || '').replace(/"/g, '""')}"`,
+      `"${(r.municipio || '').replace(/"/g, '""')}"`,
+      `"${r.grado || ''}"`,
       r.intento || 1,
       r.puntaje,
       r.totalPreguntas || 10,
@@ -493,7 +549,8 @@ class RecordsManager {
     const link = document.createElement('a');
     link.setAttribute('href', url);
     const dateStr = new Date().toISOString().slice(0, 10);
-    link.setAttribute('download', `SENA_Evaluaciones_Ficha_${this.currentFilterFicha}_${dateStr}.csv`);
+    const colegioSlug = this.currentFilterColegio !== 'ALL' ? this.currentFilterColegio.replace(/[^a-zA-Z0-9]/g, '_') : 'Todos';
+    link.setAttribute('download', `SENA_Articulada_Evaluaciones_${colegioSlug}_${dateStr}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -509,7 +566,7 @@ class RecordsManager {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `SENA_Evaluaciones_${Date.now()}.json`);
+    link.setAttribute('download', `SENA_Articulada_Evaluaciones_${Date.now()}.json`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

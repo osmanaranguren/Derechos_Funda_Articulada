@@ -3,11 +3,13 @@
  * Soporta credenciales desde js/supabase-credentials.js o desde localStorage con interfaz visual.
  */
 
-const SUPABASE_STORAGE_KEY = 'SENA_SUPABASE_CONFIG';
+const SUPABASE_STORAGE_KEY = 'SENA_ARTICULADA_SUPABASE_CONFIG';
+const DATA_STORAGE_KEY = 'SENA_ARTICULADA_EVALUACIONES_DATA';
+const CACHE_STORAGE_KEY = 'SENA_ARTICULADA_EVALUACIONES_CACHE';
 
 const SupabaseManager = {
   client: null,
-  tableName: 'evaluaciones_sena',
+  tableName: 'evaluaciones_articulada',
   status: 'unconfigured', // 'connected', 'error', 'unconfigured'
   statusMessage: '',
 
@@ -22,9 +24,9 @@ const SupabaseManager = {
       if (window.DEFAULT_SUPABASE_CONFIG.anonKey) anonKey = window.DEFAULT_SUPABASE_CONFIG.anonKey.trim();
     }
 
-    // 2. Verificar si hay credenciales guardadas en el navegador
+    // 2. Verificar si hay credenciales guardadas en el navegador (busca articulada o previa general)
     try {
-      const stored = localStorage.getItem(SUPABASE_STORAGE_KEY);
+      const stored = localStorage.getItem(SUPABASE_STORAGE_KEY) || localStorage.getItem('SENA_SUPABASE_CONFIG');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.url) url = parsed.url.trim();
@@ -95,12 +97,12 @@ const SupabaseManager = {
       if (error) {
         if (error.code === '42P01' || error.message.includes('does not exist') || error.message.includes('relation')) {
           this.status = 'table_missing';
-          this.statusMessage = 'Conexión OK, pero falta crear la tabla "evaluaciones_sena" con el script SQL.';
+          this.statusMessage = 'Conexión OK, pero falta crear la tabla "evaluaciones_articulada" con el script SQL.';
           this.updateStatusBadge();
           return {
             success: false,
             tableMissing: true,
-            message: 'Conexión exitosa a Supabase, pero la tabla "evaluaciones_sena" no ha sido creada. Haz clic en "Copiar SQL Tabla" y ejecútalo en Supabase.'
+            message: 'Conexión exitosa a Supabase, pero la tabla "evaluaciones_articulada" no ha sido creada. Haz clic en "Copiar SQL Tabla" y ejecútalo en Supabase.'
           };
         }
         this.status = 'error';
@@ -173,6 +175,9 @@ const SupabaseManager = {
             nombre: record.nombre,
             documento: record.documento || '',
             ficha: String(record.ficha),
+            colegio: record.colegio || '',
+            municipio: record.municipio || '',
+            grado: record.grado || '',
             intento: Number(record.intento || 1),
             puntaje: Number(record.puntaje),
             total_preguntas: Number(record.totalPreguntas),
@@ -180,7 +185,9 @@ const SupabaseManager = {
             aprobado: Boolean(record.aprobado),
             tiempo_empleado: record.tiempo || '',
             respuestas_detalle: record.respuestas || [],
-            calificado_sofia: Boolean(record.calificado_sofia)
+            calificado_sofia: Boolean(record.calificado_sofia),
+            calificado_sofia_por: record.calificado_sofia_por || '',
+            calificado_sofia_fecha: record.calificado_sofia_fecha || ''
           };
 
           // Solo enviar id si es un UUID válido de Postgres; de lo contrario gen_random_uuid() lo genera
@@ -193,11 +200,16 @@ const SupabaseManager = {
             .insert([payload])
             .select();
 
-          // Resiliencia: Si la tabla de Supabase aún no tiene columnas añadidas (intento, calificado_sofia), reintentar
-          if (error && (error.message.includes('intento') || error.message.includes('calificado_sofia') || error.code === '42703')) {
+          // Resiliencia: Si la tabla de Supabase aún no tiene alguna columna agregada, reintentar limpiando campos opcionales
+          if (error && error.code === '42703') {
             const fallbackPayload = { ...payload };
-            if (error.message.includes('intento') || error.code === '42703') delete fallbackPayload.intento;
-            if (error.message.includes('calificado_sofia') || error.code === '42703') delete fallbackPayload.calificado_sofia;
+            if (error.message.includes('colegio')) delete fallbackPayload.colegio;
+            if (error.message.includes('municipio')) delete fallbackPayload.municipio;
+            if (error.message.includes('grado')) delete fallbackPayload.grado;
+            if (error.message.includes('intento')) delete fallbackPayload.intento;
+            if (error.message.includes('calificado_sofia')) delete fallbackPayload.calificado_sofia;
+            if (error.message.includes('calificado_sofia_por')) delete fallbackPayload.calificado_sofia_por;
+            if (error.message.includes('calificado_sofia_fecha')) delete fallbackPayload.calificado_sofia_fecha;
             const retry = await this.client.from(this.tableName).insert([fallbackPayload]).select();
             data = retry.data;
             error = retry.error;
@@ -259,6 +271,9 @@ const SupabaseManager = {
               nombre: item.nombre,
               documento: item.documento,
               ficha: item.ficha,
+              colegio: item.colegio || '',
+              municipio: item.municipio || '',
+              grado: item.grado || '',
               intento: item.intento || 1,
               puntaje: item.puntaje,
               totalPreguntas: item.total_preguntas || 10,
@@ -275,7 +290,7 @@ const SupabaseManager = {
             }));
 
             // Respaldar en caché
-            localStorage.setItem('SENA_EVALUACIONES_CACHE', JSON.stringify(mapped));
+            localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(mapped));
             return { records: mapped, source: 'supabase' };
           } else if (error) {
             console.warn('Error consultando Supabase:', error);
@@ -376,10 +391,10 @@ const SupabaseManager = {
         }
         return r;
       });
-      localStorage.setItem('SENA_EVALUACIONES_DATA', JSON.stringify(list));
+      localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(list));
 
       // Actualizar también en caché de Supabase
-      const cacheRaw = localStorage.getItem('SENA_EVALUACIONES_CACHE');
+      const cacheRaw = localStorage.getItem(CACHE_STORAGE_KEY);
       if (cacheRaw) {
         let cacheList = JSON.parse(cacheRaw);
         if (Array.isArray(cacheList)) {
@@ -391,7 +406,7 @@ const SupabaseManager = {
             }
             return r;
           });
-          localStorage.setItem('SENA_EVALUACIONES_CACHE', JSON.stringify(cacheList));
+          localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cacheList));
         }
       }
     } catch (e) {
@@ -402,7 +417,7 @@ const SupabaseManager = {
   // Manejo de LocalStorage
   getLocalRecords() {
     try {
-      const raw = localStorage.getItem('SENA_EVALUACIONES_DATA');
+      const raw = localStorage.getItem(DATA_STORAGE_KEY);
       if (raw) return JSON.parse(raw);
     } catch (e) {
       console.error(e);
@@ -413,7 +428,7 @@ const SupabaseManager = {
   saveLocalRecord(record) {
     const list = this.getLocalRecords();
     list.unshift(record);
-    localStorage.setItem('SENA_EVALUACIONES_DATA', JSON.stringify(list));
+    localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(list));
   },
 
   deleteLocalRecord(recordId) {
@@ -421,15 +436,15 @@ const SupabaseManager = {
       // Eliminar de datos locales primarios
       let list = this.getLocalRecords();
       list = list.filter(r => String(r.id) !== String(recordId));
-      localStorage.setItem('SENA_EVALUACIONES_DATA', JSON.stringify(list));
+      localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(list));
 
       // Eliminar también de la caché de Supabase
-      const cacheRaw = localStorage.getItem('SENA_EVALUACIONES_CACHE');
+      const cacheRaw = localStorage.getItem(CACHE_STORAGE_KEY);
       if (cacheRaw) {
         let cacheList = JSON.parse(cacheRaw);
         if (Array.isArray(cacheList)) {
           cacheList = cacheList.filter(r => String(r.id) !== String(recordId));
-          localStorage.setItem('SENA_EVALUACIONES_CACHE', JSON.stringify(cacheList));
+          localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cacheList));
         }
       }
     } catch (e) {
@@ -441,65 +456,52 @@ const SupabaseManager = {
   getSqlScript() {
     return `-- ========================================================
 -- SCRIPT DE INICIALIZACIÓN DE TABLA PARA SUPABASE
--- Plataforma de Evaluación SENA: Derechos Fundamentales
+-- Plataforma SENA: Derechos Fundamentales en el Trabajo
+-- Programa: Articulación con la Media (Colegios)
 -- ========================================================
 
--- 1. Crear tabla de evaluaciones
-CREATE TABLE IF NOT EXISTS public.evaluaciones_sena (
+-- 1. Crear tabla dedicada para Colegios en Articulación
+CREATE TABLE IF NOT EXISTS public.evaluaciones_articulada (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     nombre TEXT NOT NULL,
     documento TEXT,
     ficha TEXT NOT NULL,
+    colegio TEXT NOT NULL,
+    municipio TEXT,
+    grado TEXT,
     intento INTEGER DEFAULT 1,
     puntaje INTEGER NOT NULL,
     total_preguntas INTEGER NOT NULL DEFAULT 10,
     porcentaje NUMERIC(5,2) NOT NULL,
     aprobado BOOLEAN NOT NULL,
     calificado_sofia BOOLEAN DEFAULT FALSE,
+    calificado_sofia_por TEXT,
+    calificado_sofia_fecha TEXT,
     tiempo_empleado TEXT,
     respuestas_detalle JSONB
 );
 
 -- 2. Habilitar Seguridad a Nivel de Fila (RLS)
-ALTER TABLE public.evaluaciones_sena ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.evaluaciones_articulada ENABLE ROW LEVEL SECURITY;
 
--- 3. Crear política para permitir inserción anónima
-CREATE POLICY "Permitir insercion anonima" 
-ON public.evaluaciones_sena 
-FOR INSERT 
-TO anon, authenticated 
-WITH CHECK (true);
+-- 3. Políticas de acceso (Inserción, Lectura, Actualización, Eliminación)
+CREATE POLICY "Permitir insercion anonima articulada" 
+ON public.evaluaciones_articulada FOR INSERT TO anon, authenticated WITH CHECK (true);
 
--- 4. Crear política para permitir lectura anónima
-CREATE POLICY "Permitir lectura anonima" 
-ON public.evaluaciones_sena 
-FOR SELECT 
-TO anon, authenticated 
-USING (true);
+CREATE POLICY "Permitir lectura anonima articulada" 
+ON public.evaluaciones_articulada FOR SELECT TO anon, authenticated USING (true);
 
--- 5. Crear política para permitir eliminación
-CREATE POLICY "Permitir eliminacion anonima" 
-ON public.evaluaciones_sena 
-FOR DELETE 
-TO anon, authenticated 
-USING (true);
+CREATE POLICY "Permitir actualizacion anonima articulada" 
+ON public.evaluaciones_articulada FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 
--- 6. Crear política para permitir actualización (ej: calificado_sofia)
-CREATE POLICY "Permitir actualizacion anonima" 
-ON public.evaluaciones_sena 
-FOR UPDATE 
-TO anon, authenticated 
-USING (true)
-WITH CHECK (true);
+CREATE POLICY "Permitir eliminacion anonima articulada" 
+ON public.evaluaciones_articulada FOR DELETE TO anon, authenticated USING (true);
 
--- 7. Crear índices para búsquedas rápidas por ficha y fecha
-CREATE INDEX IF NOT EXISTS idx_evaluaciones_ficha ON public.evaluaciones_sena (ficha);
-CREATE INDEX IF NOT EXISTS idx_evaluaciones_fecha ON public.evaluaciones_sena (created_at DESC);
-
--- 8. Migración para tablas existentes que no tengan la columna calificado_sofia o intento:
-ALTER TABLE public.evaluaciones_sena ADD COLUMN IF NOT EXISTS intento INTEGER DEFAULT 1;
-ALTER TABLE public.evaluaciones_sena ADD COLUMN IF NOT EXISTS calificado_sofia BOOLEAN DEFAULT FALSE;
+-- 4. Índices para búsquedas rápidas
+CREATE INDEX IF NOT EXISTS idx_articulada_ficha ON public.evaluaciones_articulada (ficha);
+CREATE INDEX IF NOT EXISTS idx_articulada_colegio ON public.evaluaciones_articulada (colegio);
+CREATE INDEX IF NOT EXISTS idx_articulada_fecha ON public.evaluaciones_articulada (created_at DESC);
 `;
   }
 };

@@ -14,5 +14,5 @@ window.DEFAULT_SUPABASE_CONFIG = {
   anonKey: 'sb_publishable_7tEKVVgbDIhmGnP_tGqLiQ_2WWdpKtt',
 
   // Nombre de la tabla
-  tableName: 'evaluaciones_sena'
+  tableName: 'evaluaciones_articulada'
 };

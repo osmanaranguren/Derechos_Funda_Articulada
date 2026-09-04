@@ -10,7 +10,10 @@ class QuizEngine {
     this.apprentice = {
       nombre: '',
       documento: '',
-      ficha: ''
+      ficha: '',
+      colegio: '',
+      municipio: '',
+      grado: ''
     };
     this.timerSeconds = 0;
     this.timerInterval = null;
@@ -187,6 +190,35 @@ class QuizEngine {
     this.setupRealtimeCheck();
   }
 
+  // =========================================================================
+  // GESTIÓN DE PRIMER INTENTO NO SUPERADO (PENDIENTE / NO PUBLICADO)
+  // =========================================================================
+  getFirstAttempts() {
+    try {
+      const raw = localStorage.getItem('SENA_ARTICULADA_FIRST_ATTEMPTS');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.error('Error leyendo first_attempts:', e);
+    }
+    return {};
+  }
+
+  saveFirstAttempt(doc, record) {
+    const clean = this.normalizeDoc(doc);
+    if (!clean) return;
+    const attempts = this.getFirstAttempts();
+    attempts[clean] = record;
+    localStorage.setItem('SENA_ARTICULADA_FIRST_ATTEMPTS', JSON.stringify(attempts));
+  }
+
+  removeFirstAttempt(doc) {
+    const clean = this.normalizeDoc(doc);
+    if (!clean) return;
+    const attempts = this.getFirstAttempts();
+    delete attempts[clean];
+    localStorage.setItem('SENA_ARTICULADA_FIRST_ATTEMPTS', JSON.stringify(attempts));
+  }
+
   setupRealtimeCheck() {
     const docInput = document.getElementById('quiz-input-doc');
     const nameInput = document.getElementById('quiz-input-name');
@@ -205,35 +237,22 @@ class QuizEngine {
       if (cleanDoc && cleanDoc.length >= 4) {
         const status = await this.checkApprenticeStatus(doc, name, ficha);
         
-        if (status.attemptsCount > 0) {
-          const lastRec = status.previousRecords[0] || status.passedRecord;
-          const isPassed = status.hasPassed;
-
+        // 1. Caso: El estudiante ya aprobó satisfactoriamente
+        if (status.hasPassed) {
           if (errorEl) {
             errorEl.innerHTML = `
-              <div class="p-4 rounded-2xl ${
-                isPassed 
-                  ? 'bg-emerald-500/10 border-2 border-emerald-500/40 text-emerald-900 dark:text-emerald-200' 
-                  : 'bg-amber-500/10 border-2 border-amber-500/40 text-amber-900 dark:text-amber-200'
-              } text-left animate-fadeIn shadow-sm">
+              <div class="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 text-left animate-fadeIn shadow-sm">
                 <div class="flex items-center gap-2.5 mb-2">
-                  <span class="text-2xl">${isPassed ? '🎓' : '⚠️'}</span>
+                  <span class="text-2xl">🎓</span>
                   <div>
-                    <h4 class="font-black text-sm text-slate-900 dark:text-white">Ya presentaste la prueba</h4>
-                    <p class="text-xs opacity-90">El documento <strong>${doc}</strong> ya cuenta con una evaluación registrada en el sistema (${lastRec ? (lastRec.fecha || 'Previa') : ''}).</p>
+                    <h4 class="font-black text-sm text-slate-900 dark:text-white">Evaluación Aprobada</h4>
+                    <p class="text-xs opacity-90">El documento <strong>${doc}</strong> ya aprobó la evaluación con <strong>${status.bestScore}%</strong>. Tu certificación oficial está lista.</p>
                   </div>
                 </div>
-                <p class="text-xs mb-3 leading-relaxed">
-                  ${isPassed 
-                    ? `Resultado: <strong class="text-emerald-600 dark:text-emerald-400">APROBADO con ${status.bestScore}%</strong>. Tu certificación oficial está disponible.`
-                    : `Resultado: <strong>Calificación obtenida: ${lastRec ? lastRec.porcentaje : 0}%</strong>.`}
-                </p>
-                <div class="flex flex-wrap items-center gap-2">
-                  ${isPassed ? `
-                    <button type="button" onclick="window.recordsManager.showCertificate(window.quizEngine.lastPassedRecord || ${JSON.stringify(status.passedRecord).replace(/"/g, '&quot;')})" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
-                      <span>📜</span> Ver Mi Certificado SENA
-                    </button>
-                  ` : ''}
+                <div class="flex flex-wrap items-center gap-2 mt-2">
+                  <button type="button" onclick="window.recordsManager.showCertificate(window.quizEngine.lastPassedRecord || ${JSON.stringify(status.passedRecord).replace(/"/g, '&quot;')})" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
+                    <span>📜</span> Ver Mi Certificado SENA
+                  </button>
                   <button type="button" onclick="window.app.navigateTo('slides')" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition">
                     <span>📖</span> Ver Material de Estudio
                   </button>
@@ -246,14 +265,65 @@ class QuizEngine {
           if (startBtn) {
             startBtn.disabled = true;
             startBtn.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
-            startBtn.innerHTML = '<span>🔒 Ya Presentaste la Prueba</span>';
+            startBtn.innerHTML = '<span>🔒 Evaluación Ya Aprobada</span>';
+          }
+          return;
+        }
+
+        // 2. Caso: Agotó los 2 intentos sin aprobar
+        if (!status.canAttempt) {
+          if (errorEl) {
+            errorEl.innerHTML = `
+              <div class="p-4 rounded-2xl bg-rose-500/10 border-2 border-rose-500/40 text-rose-900 dark:text-rose-200 text-left animate-fadeIn shadow-sm">
+                <div class="flex items-center gap-2.5 mb-2">
+                  <span class="text-2xl">⛔</span>
+                  <div>
+                    <h4 class="font-black text-sm text-slate-900 dark:text-white">Intentos Oficiales Agotados</h4>
+                    <p class="text-xs opacity-90">El documento <strong>${doc}</strong> ya presentó los 2 intentos oficiales permitidos.</p>
+                  </div>
+                </div>
+                <p class="text-xs">Calificación final registrada: <strong>${status.bestScore}%</strong>. Consulta con tu instructor.</p>
+              </div>
+            `;
+            errorEl.classList.remove('hidden');
+          }
+
+          if (startBtn) {
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
+            startBtn.innerHTML = '<span>🔒 Intentos Agotados (2/2)</span>';
+          }
+          return;
+        }
+
+        // 3. Caso: Tiene 1 intento presentado pero reprobado -> TIENE EL SEGUNDO INTENTO DISPONIBLE
+        if (status.attemptsCount === 1) {
+          if (errorEl) {
+            errorEl.innerHTML = `
+              <div class="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-500/40 text-amber-900 dark:text-amber-200 text-left animate-fadeIn shadow-sm">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-2xl">🔄</span>
+                  <div>
+                    <h4 class="font-black text-xs text-slate-900 dark:text-white">Segundo Intento Oficial Disponible (2 de 2)</h4>
+                    <p class="text-[11px] opacity-90">Tu primer intento (${status.bestScore}%) no alcanzó el 70% y <strong>no fue publicado</strong>. ¡Aprovecha este segundo intento para certificarte!</p>
+                  </div>
+                </div>
+              </div>
+            `;
+            errorEl.classList.remove('hidden');
+          }
+
+          if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
+            startBtn.innerHTML = '<span>🚀 Iniciar Segundo Intento Oficial (2 de 2)</span>';
           }
           return;
         }
       }
 
-      // Si no hay registro previo para este documento
-      if (errorEl && errorEl.innerHTML.includes('Ya presentaste la prueba')) {
+      // Si no hay intentos previos para este documento
+      if (errorEl && errorEl.innerHTML.includes('Segundo Intento') === false && errorEl.innerHTML.includes('Intentos Oficiales') === false && errorEl.innerHTML.includes('Evaluación Aprobada') === false) {
         errorEl.classList.add('hidden');
         errorEl.innerHTML = '';
       }
@@ -320,18 +390,32 @@ class QuizEngine {
     const hasPassed = !!passedRecord;
     const bestScore = previous.reduce((max, r) => Math.max(max, Number(r.porcentaje) || 0), 0);
 
+    const cleanDoc = this.normalizeDoc(documento);
+    const firstAttempts = this.getFirstAttempts();
+    const pendingFirstAttempt = firstAttempts[cleanDoc] || null;
+
+    // Si tiene un intento 1 reprobado pendiente no publicado y no hay registros en la BD
+    let effectiveAttempts = count;
+    if (pendingFirstAttempt && count === 0) {
+      effectiveAttempts = 1;
+    }
+
+    const currentScore = pendingFirstAttempt ? Math.max(bestScore, Number(pendingFirstAttempt.porcentaje) || 0) : bestScore;
+    const canAttempt = !hasPassed && effectiveAttempts < 2;
+
     return {
-      attemptsCount: count,
+      attemptsCount: effectiveAttempts,
       previousRecords: previous,
+      pendingFirstAttempt: pendingFirstAttempt,
       hasPassed: hasPassed,
       passedRecord: passedRecord,
-      bestScore: bestScore,
-      canAttempt: !hasPassed && count < 2,
-      nextAttemptNumber: count + 1
+      bestScore: currentScore,
+      canAttempt: canAttempt,
+      nextAttemptNumber: hasPassed ? 2 : (effectiveAttempts >= 2 ? 2 : effectiveAttempts + 1)
     };
   }
 
-  async startQuiz(nombre, documento, ficha) {
+  async startQuiz(nombre, documento, ficha, colegio, municipio, grado) {
     if (typeof nombre !== 'string' || !nombre.trim()) {
       const elName = document.getElementById('quiz-input-name');
       nombre = elName ? elName.value : '';
@@ -343,6 +427,18 @@ class QuizEngine {
     if (typeof ficha !== 'string' || !ficha.trim()) {
       const elFicha = document.getElementById('quiz-input-ficha');
       ficha = elFicha ? elFicha.value : '';
+    }
+    if (typeof colegio !== 'string' || !colegio.trim()) {
+      const elColegio = document.getElementById('quiz-input-colegio');
+      colegio = elColegio ? elColegio.value : '';
+    }
+    if (typeof municipio !== 'string' || !municipio.trim()) {
+      const elMun = document.getElementById('quiz-input-municipio');
+      municipio = elMun ? elMun.value : '';
+    }
+    if (typeof grado !== 'string' || !grado.trim()) {
+      const elGrado = document.getElementById('quiz-input-grado');
+      grado = elGrado ? elGrado.value : '';
     }
 
     const errorEl = document.getElementById('quiz-setup-error');
@@ -360,6 +456,18 @@ class QuizEngine {
       return false;
     }
 
+    if (!documento || !documento.trim()) {
+      if (errorEl) {
+        errorEl.textContent = '⚠️ Por favor ingresa tu Número de Documento (identificación oficial del estudiante/aprendiz).';
+        errorEl.classList.remove('hidden');
+      } else {
+        alert('Por favor ingresa tu Número de Documento.');
+      }
+      const elDoc = document.getElementById('quiz-input-doc');
+      if (elDoc) elDoc.focus();
+      return false;
+    }
+
     if (!ficha || !ficha.trim()) {
       if (errorEl) {
         errorEl.textContent = '⚠️ Por favor ingresa el Número de Ficha SENA.';
@@ -372,50 +480,60 @@ class QuizEngine {
       return false;
     }
 
-    if (!documento || !documento.trim()) {
+    if (!colegio || !colegio.trim()) {
       if (errorEl) {
-        errorEl.textContent = '⚠️ Por favor ingresa tu Número de Documento (identificación oficial del aprendiz).';
+        errorEl.textContent = '⚠️ Por favor ingresa el nombre de la Institución Educativa (Colegio en Convenio).';
         errorEl.classList.remove('hidden');
       } else {
-        alert('Por favor ingresa tu Número de Documento.');
+        alert('Por favor ingresa el nombre de la Institución Educativa.');
       }
-      const elDoc = document.getElementById('quiz-input-doc');
-      if (elDoc) elDoc.focus();
+      const elColegio = document.getElementById('quiz-input-colegio');
+      if (elColegio) elColegio.focus();
       return false;
     }
 
-    // Comprobación de estado previo del aprendiz (Bloqueo si ya presentó la prueba)
+    if (!municipio || !municipio.trim()) {
+      if (errorEl) {
+        errorEl.textContent = '⚠️ Por favor ingresa el Municipio o Sede de la institución.';
+        errorEl.classList.remove('hidden');
+      } else {
+        alert('Por favor ingresa el Municipio o Sede de la institución.');
+      }
+      const elMun = document.getElementById('quiz-input-municipio');
+      if (elMun) elMun.focus();
+      return false;
+    }
+
+    if (!grado || !grado.trim()) {
+      if (errorEl) {
+        errorEl.textContent = '⚠️ Por favor selecciona tu Grado de Educación Media (10° o 11°).';
+        errorEl.classList.remove('hidden');
+      } else {
+        alert('Por favor selecciona tu Grado de Educación Media (10° o 11°).');
+      }
+      const elGrado = document.getElementById('quiz-input-grado');
+      if (elGrado) elGrado.focus();
+      return false;
+    }
+
+    // Comprobación de estado previo del aprendiz (Permitir intento 2 si reprobó el intento 1)
     const status = await this.checkApprenticeStatus(documento, nombre, ficha);
 
-    if (status.attemptsCount > 0) {
-      const lastRec = status.previousRecords[0] || status.passedRecord;
-      const isPassed = status.hasPassed;
-
+    if (status.hasPassed) {
       if (errorEl) {
         errorEl.innerHTML = `
-          <div class="p-4 rounded-2xl ${
-            isPassed 
-              ? 'bg-emerald-500/10 border-2 border-emerald-500/40 text-emerald-900 dark:text-emerald-200' 
-              : 'bg-amber-500/10 border-2 border-amber-500/40 text-amber-900 dark:text-amber-200'
-          } text-left animate-fadeIn shadow-sm">
+          <div class="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 text-left animate-fadeIn shadow-sm">
             <div class="flex items-center gap-2.5 mb-2">
-              <span class="text-2xl">${isPassed ? '🎓' : '⚠️'}</span>
+              <span class="text-2xl">🎓</span>
               <div>
-                <h4 class="font-black text-sm text-slate-900 dark:text-white">Ya presentaste la prueba</h4>
-                <p class="text-xs opacity-90">El documento <strong>${documento}</strong> ya cuenta con una evaluación registrada en el sistema (${lastRec ? (lastRec.fecha || 'Previa') : ''}).</p>
+                <h4 class="font-black text-sm text-slate-900 dark:text-white">Evaluación Ya Aprobada</h4>
+                <p class="text-xs opacity-90">El documento <strong>${documento}</strong> ya aprobó satisfactoriamente con <strong>${status.bestScore}%</strong>.</p>
               </div>
             </div>
-            <p class="text-xs mb-3 leading-relaxed">
-              ${isPassed 
-                ? `Resultado: <strong class="text-emerald-600 dark:text-emerald-400">APROBADO con ${status.bestScore}%</strong>. Tu certificación oficial está disponible.`
-                : `Resultado: <strong>Calificación obtenida: ${lastRec ? lastRec.porcentaje : 0}%</strong>.`}
-            </p>
-            <div class="flex flex-wrap items-center gap-2">
-              ${isPassed ? `
-                <button type="button" onclick="window.recordsManager.showCertificate(window.quizEngine.lastPassedRecord || ${JSON.stringify(status.passedRecord).replace(/"/g, '&quot;')})" class="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
-                  <span>📜</span> Ver y Descargar Certificado SENA
-                </button>
-              ` : ''}
+            <div class="flex flex-wrap items-center gap-2 mt-3">
+              <button type="button" onclick="window.recordsManager.showCertificate(window.quizEngine.lastPassedRecord || ${JSON.stringify(status.passedRecord).replace(/"/g, '&quot;')})" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer">
+                <span>📜</span> Ver Mi Certificado SENA
+              </button>
               <button type="button" onclick="window.app.navigateTo('slides')" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition">
                 <span>📖</span> Ir a Diapositivas
               </button>
@@ -424,26 +542,59 @@ class QuizEngine {
         `;
         errorEl.classList.remove('hidden');
       } else {
-        alert(`Ya presentaste la prueba con el documento ${documento}.`);
+        alert(`Ya aprobaste la evaluación con el documento ${documento}.`);
       }
 
       if (startBtn) {
         startBtn.disabled = true;
         startBtn.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
-        startBtn.innerHTML = '<span>🔒 Ya Presentaste la Prueba</span>';
+        startBtn.innerHTML = '<span>🔒 Evaluación Ya Aprobada</span>';
       }
       return false;
     }
 
-    // Configurar número de intento actual
-    this.currentAttemptNumber = status.attemptsCount + 1;
+    if (!status.canAttempt) {
+      if (errorEl) {
+        errorEl.innerHTML = `
+          <div class="p-4 rounded-2xl bg-rose-500/10 border-2 border-rose-500/40 text-rose-900 dark:text-rose-200 text-left animate-fadeIn shadow-sm">
+            <div class="flex items-center gap-2.5 mb-2">
+              <span class="text-2xl">⛔</span>
+              <div>
+                <h4 class="font-black text-sm text-slate-900 dark:text-white">Intentos Oficiales Agotados</h4>
+                <p class="text-xs opacity-90">El documento <strong>${documento}</strong> ya ha completado los 2 intentos permitidos para esta evaluación.</p>
+              </div>
+            </div>
+            <p class="text-xs mb-3">Calificación final registrada: <strong>${status.bestScore}%</strong>. Comunícate con tu instructor.</p>
+            <button type="button" onclick="window.app.navigateTo('slides')" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition">
+              <span>📖</span> Repasar Diapositivas
+            </button>
+          </div>
+        `;
+        errorEl.classList.remove('hidden');
+      } else {
+        alert(`Has agotado los 2 intentos oficiales con el documento ${documento}.`);
+      }
+
+      if (startBtn) {
+        startBtn.disabled = true;
+        startBtn.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
+        startBtn.innerHTML = '<span>🔒 Intentos Agotados (2/2)</span>';
+      }
+      return false;
+    }
+
+    // Configurar número de intento actual (1 o 2)
+    this.currentAttemptNumber = status.nextAttemptNumber;
 
     if (errorEl) errorEl.classList.add('hidden');
 
     this.apprentice = {
       nombre: nombre.trim(),
       documento: (documento || '').trim(),
-      ficha: ficha.trim()
+      ficha: ficha.trim(),
+      colegio: colegio.trim(),
+      municipio: municipio.trim(),
+      grado: grado.trim()
     };
 
     // Asegurar carga de preguntas
@@ -731,6 +882,9 @@ class QuizEngine {
       nombre: this.apprentice.nombre,
       documento: this.apprentice.documento,
       ficha: this.apprentice.ficha,
+      colegio: this.apprentice.colegio || '',
+      municipio: this.apprentice.municipio || '',
+      grado: this.apprentice.grado || '',
       intento: intentoActual,
       totalIntentos: 2,
       puntaje: score,
@@ -738,6 +892,8 @@ class QuizEngine {
       porcentaje: porcentaje,
       aprobado: aprobado,
       calificado_sofia: false,
+      calificado_sofia_por: '',
+      calificado_sofia_fecha: '',
       tiempo: tiempoEmpleado,
       fecha: new Date().toLocaleString('es-CO'),
       fechaISO: new Date().toISOString(),
@@ -752,10 +908,38 @@ class QuizEngine {
       if (window.soundEngine) window.soundEngine.playWrong();
     }
 
-    // Guardar en Supabase y LocalStorage
-    let saveResult = { synced: false, source: 'local' };
-    if (window.SupabaseManager) {
-      saveResult = await window.SupabaseManager.saveEvaluation(evaluationRecord);
+    const cleanDoc = this.normalizeDoc(this.apprentice.documento);
+    let saveResult = { synced: false, source: 'local', isFirstAttemptFailed: false };
+
+    // =========================================================================
+    // REGLA: Si pierde el intento 1, NO se publica en Supabase ni en la tabla.
+    // Solo se publica si aprueba, o si completa su intento final (intento 2).
+    // =========================================================================
+    if (intentoActual === 1 && !aprobado) {
+      this.saveFirstAttempt(cleanDoc, evaluationRecord);
+      saveResult = {
+        synced: false,
+        source: 'local_pending',
+        isFirstAttemptFailed: true,
+        message: 'Primer intento no superado. No ha sido publicado en el sistema.'
+      };
+    } else {
+      this.removeFirstAttempt(cleanDoc);
+
+      // Si es intento 2 y aprueba, limpiar cualquier intento previo no aprobado en Supabase/local
+      if (intentoActual === 2 && aprobado) {
+        const previousAttempts = await this.getApprenticeAttempts(this.apprentice.documento, this.apprentice.nombre, this.apprentice.ficha);
+        for (const prev of previousAttempts) {
+          if (!prev.aprobado && prev.id && window.SupabaseManager) {
+            await window.SupabaseManager.deleteEvaluation(prev.id);
+          }
+        }
+      }
+
+      if (window.SupabaseManager) {
+        saveResult = await window.SupabaseManager.saveEvaluation(evaluationRecord);
+        saveResult.isFirstAttemptFailed = false;
+      }
     }
 
     // Guardar registro activo para constancia
@@ -769,39 +953,55 @@ class QuizEngine {
     const setupView = document.getElementById('quiz-setup-view');
     const runningView = document.getElementById('quiz-running-view');
     const resultsView = document.getElementById('quiz-results-view');
+    const resultCard = document.getElementById('quiz-result-card');
 
     if (setupView) setupView.classList.add('hidden');
     if (runningView) runningView.classList.add('hidden');
     if (resultsView) resultsView.classList.remove('hidden');
 
-    const resultCard = document.getElementById('quiz-result-summary-card');
     if (!resultCard) return;
 
     const isPassed = record.aprobado;
     const currentAttempt = record.intento || 1;
-    const hasRemainingAttempt = currentAttempt < 2;
+    const isFirstAttemptFailed = (saveResult && saveResult.isFirstAttemptFailed) || (currentAttempt === 1 && !isPassed);
+    const hasRemainingAttempt = isFirstAttemptFailed || (currentAttempt < 2 && !isPassed);
 
     resultCard.innerHTML = `
       <div class="text-center mb-8 animate-fadeIn">
         <div class="inline-flex items-center justify-center w-24 h-24 rounded-full ${
           isPassed 
             ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 border-4 border-emerald-400 animate-bounce' 
-            : 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 border-4 border-rose-400'
+            : isFirstAttemptFailed
+              ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 border-4 border-amber-400'
+              : 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400 border-4 border-rose-400'
         } mb-4">
-          <span class="text-4xl">${isPassed ? '🏆' : '📚'}</span>
+          <span class="text-4xl">${isPassed ? '🏆' : isFirstAttemptFailed ? '🔄' : '📚'}</span>
         </div>
 
         <h2 class="text-2xl md:text-3xl font-black text-slate-800 dark:text-white mb-2">
-          ${isPassed ? '¡FELICITACIONES, APROBASTE LA EVALUACIÓN!' : 'EVALUACIÓN NO APROBADA (POR MEJORAR)'}
+          ${isPassed 
+            ? '¡FELICITACIONES, APROBASTE LA EVALUACIÓN!' 
+            : isFirstAttemptFailed
+              ? 'PRIMER INTENTO NO SUPERADO (NO PUBLICADO)'
+              : 'EVALUACIÓN NO APROBADA (INTENTOS AGOTADOS)'}
         </h2>
         <p class="text-slate-600 dark:text-slate-300 max-w-lg mx-auto text-sm md:text-base">
           ${isPassed 
             ? `Has demostrado un excelente dominio de los Derechos Humanos y Fundamentales en el Trabajo según la competencia SENA 210201501. <strong>Aprobado en el Intento ${currentAttempt} de 2.</strong>` 
-            : `Has completado el cuestionario (Intento ${currentAttempt} de 2), pero obtuviste un <strong>${record.porcentaje}%</strong> sin alcanzar el porcentaje mínimo aprobatorio del <strong>70%</strong>.`}
+            : isFirstAttemptFailed
+              ? `Obtuviste un <strong>${record.porcentaje}%</strong> en tu primer intento. <strong>Este resultado no ha sido publicado en el sistema</strong>. Tienes tu segundo intento oficial disponible para alcanzar el 70% requerido y certificarte.`
+              : `Has completado el cuestionario (Intento ${currentAttempt} de 2) con un <strong>${record.porcentaje}%</strong> sin alcanzar el porcentaje mínimo aprobatorio del <strong>70%</strong>.`}
         </p>
 
-        <!-- Mensaje de NO GENERACIÓN DE CERTIFICADO si no aprobó -->
-        ${!isPassed ? `
+        <!-- Mensaje de Estado / Certificado -->
+        ${isFirstAttemptFailed ? `
+          <div class="max-w-md mx-auto mt-4 p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-800 dark:text-amber-200 text-center">
+            <span class="text-sm font-black block mb-1">🛡️ Resultado protegido: No publicado en la lista</span>
+            <p class="text-xs leading-relaxed">
+              Tu calificación del primer intento no se publica en Supabase ni en el panel porque tienes derecho a presentar tu segundo intento para aprobar.
+            </p>
+          </div>
+        ` : !isPassed ? `
           <div class="max-w-md mx-auto mt-4 p-4 rounded-2xl bg-rose-500/10 border-2 border-rose-500/30 text-rose-800 dark:text-rose-200 text-center">
             <span class="text-lg font-black block mb-1">🚫 No se genera certificado</span>
             <p class="text-xs leading-relaxed">
@@ -811,12 +1011,24 @@ class QuizEngine {
         ` : ''}
 
         <!-- Indicador de Sincronización Supabase -->
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mt-4 ${
-          saveResult.synced 
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold mt-4 ${
+          isPassed && saveResult.synced 
             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
-            : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+            : isFirstAttemptFailed
+              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 font-bold'
+              : saveResult.synced
+                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
         }">
-          <span>${saveResult.synced ? '☁️ Sincronizado en Supabase' : '💾 Guardado en Almacenamiento Local'}</span>
+          <span>${
+            isPassed && saveResult.synced
+              ? '☁️ Aprobado y Sincronizado en Supabase'
+              : isFirstAttemptFailed
+                ? '🛡️ Resultado protegido: NO publicado en Supabase (1 intento restante)'
+                : saveResult.synced
+                  ? '☁️ Resultado final registrado en Supabase'
+                  : '💾 Guardado en Almacenamiento Local'
+          }</span>
         </div>
       </div>
 
@@ -858,24 +1070,25 @@ class QuizEngine {
         </div>
       </div>
 
-      <!-- Datos del Aprendiz -->
-      <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mb-8 flex flex-wrap items-center justify-between gap-4">
+      <!-- Datos del Estudiante y Colegio -->
+      <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mb-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-left">
         <div>
-          <span class="text-xs font-bold text-slate-400 uppercase">Aprendiz Registrado:</span>
-          <p class="text-base font-bold text-slate-800 dark:text-white">${record.nombre}</p>
-        </div>
-        ${record.documento ? `
-          <div>
-            <span class="text-xs font-bold text-slate-400 uppercase">Documento / ID:</span>
-            <p class="text-base font-bold text-slate-800 dark:text-white font-mono">${record.documento}</p>
-          </div>
-        ` : ''}
-        <div>
-          <span class="text-xs font-bold text-slate-400 uppercase">Fecha de Realización:</span>
-          <p class="text-sm font-semibold text-slate-600 dark:text-slate-300">${record.fecha}</p>
+          <span class="text-xs font-bold text-slate-400 uppercase block">Estudiante:</span>
+          <p class="text-sm font-bold text-slate-800 dark:text-white">${record.nombre}</p>
+          ${record.documento ? `<span class="text-xs text-slate-400 font-mono">ID: ${record.documento}</span>` : ''}
         </div>
         <div>
-          <span class="text-xs font-bold text-slate-400 uppercase">Estado en SOFIA PLUS:</span>
+          <span class="text-xs font-bold text-slate-400 uppercase block">Institución Educativa:</span>
+          <p class="text-sm font-bold text-slate-800 dark:text-white">${record.colegio || 'Convenio Articulación'}</p>
+          ${record.municipio ? `<span class="text-xs text-slate-400">${record.municipio}</span>` : ''}
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-400 uppercase block">Grado / Fecha:</span>
+          <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">${record.grado ? `Grado ${record.grado}` : 'Educación Media'}</p>
+          <span class="text-xs text-slate-400">${record.fecha}</span>
+        </div>
+        <div>
+          <span class="text-xs font-bold text-slate-400 uppercase block">Estado SOFIA PLUS:</span>
           <p class="text-sm font-semibold flex items-center gap-1.5 ${record.calificado_sofia ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}">
             <span>${record.calificado_sofia ? '✅ Calificado' : '⏳ Pendiente por Instructor'}</span>
           </p>
@@ -903,17 +1116,17 @@ class QuizEngine {
         ` : hasRemainingAttempt ? `
           <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 flex items-center justify-between gap-4 flex-wrap">
             <div class="flex items-center gap-2">
-              <span class="text-2xl">⚠️</span>
+              <span class="text-2xl">🔄</span>
               <div>
                 <strong class="text-sm block">Te queda 1 oportunidad disponible (Intento 2 de 2)</strong>
-                <span class="text-xs opacity-90">Puedes repasar las diapositivas y videos pedagógicos antes de presentar tu segundo intento.</span>
+                <span class="text-xs opacity-90">Tu primer intento <strong>no fue publicado</strong>. Puedes repasar el material o presentar tu segundo intento de inmediato.</span>
               </div>
             </div>
             <button 
               onclick="window.quizEngine.restartQuiz()" 
-              class="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-amber-600/20 animate-pulse cursor-pointer"
+              class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition shadow-lg shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5"
             >
-              🔄 Iniciar Segundo Intento (2/2)
+              <span>🚀</span> Iniciar Segundo Intento (2/2)
             </button>
           </div>
         ` : `
@@ -954,10 +1167,10 @@ class QuizEngine {
 
         ${!isPassed && hasRemainingAttempt ? `
           <button 
-            onclick="window.quizEngine.restartQuiz()"
-            class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-sm flex items-center gap-2 transition shadow-md shadow-amber-600/20"
+            onclick="window.quizEngine.restartQuiz()" 
+            class="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm flex items-center gap-2 transition shadow-md shadow-emerald-600/20 cursor-pointer"
           >
-            <span>🔄</span> Realizar Segundo Intento (2/2)
+            <span>🚀</span> Presentar Segundo Intento (2/2)
           </button>
         ` : ''}
       </div>
@@ -1008,25 +1221,51 @@ class QuizEngine {
 
   restartQuiz() {
     this.reset();
+    this.currentAttemptNumber = 2;
+
     const setupView = document.getElementById('quiz-setup-view');
     const runningView = document.getElementById('quiz-running-view');
     const resultsView = document.getElementById('quiz-results-view');
     const errorEl = document.getElementById('quiz-setup-error');
     const startBtn = document.getElementById('btn-start-quiz');
 
-    if (errorEl) {
-      errorEl.classList.add('hidden');
-      errorEl.innerHTML = '';
+    // Mantener los datos del aprendiz previamente ingresados en el formulario
+    if (this.apprentice) {
+      const elName = document.getElementById('quiz-input-name');
+      const elDoc = document.getElementById('quiz-input-doc');
+      const elFicha = document.getElementById('quiz-input-ficha');
+      const elColegio = document.getElementById('quiz-input-colegio');
+      const elMun = document.getElementById('quiz-input-municipio');
+      const elGrado = document.getElementById('quiz-input-grado');
+
+      if (elName && this.apprentice.nombre) elName.value = this.apprentice.nombre;
+      if (elDoc && this.apprentice.documento) elDoc.value = this.apprentice.documento;
+      if (elFicha && this.apprentice.ficha) elFicha.value = this.apprentice.ficha;
+      if (elColegio && this.apprentice.colegio) elColegio.value = this.apprentice.colegio;
+      if (elMun && this.apprentice.municipio) elMun.value = this.apprentice.municipio;
+      if (elGrado && this.apprentice.grado) elGrado.value = this.apprentice.grado;
     }
+
+    if (errorEl) {
+      errorEl.innerHTML = `
+        <div class="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-semibold">
+          🔄 <strong>Segundo Intento Oficial (2 de 2):</strong> Tu primer intento no fue publicado. Lee cada pregunta con calma para obtener tu certificación.
+        </div>
+      `;
+      errorEl.classList.remove('hidden');
+    }
+
     if (startBtn) {
       startBtn.disabled = false;
       startBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
-      startBtn.innerHTML = '<span>🚀 Iniciar Cuestionario Oficial</span>';
+      startBtn.innerHTML = '<span>🚀 Iniciar Segundo Intento Oficial (2 de 2)</span>';
     }
 
     if (resultsView) resultsView.classList.add('hidden');
     if (runningView) runningView.classList.add('hidden');
     if (setupView) setupView.classList.remove('hidden');
+
+    window.scrollTo({ top: setupView ? setupView.offsetTop - 50 : 0, behavior: 'smooth' });
 
     if (window.soundEngine) window.soundEngine.playClick();
   }
