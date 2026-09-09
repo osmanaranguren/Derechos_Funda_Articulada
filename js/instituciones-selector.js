@@ -317,6 +317,15 @@ class InstitucionesSelector {
     }
   }
 
+  resetSelectors() {
+    this.populateInitialDropdowns();
+    this.clearSync();
+    if (this.selectMunicipio) this.selectMunicipio.value = '';
+    if (this.selectColegio) this.selectColegio.value = '';
+    if (this.selectPrograma) this.selectPrograma.value = '';
+    if (this.selectFicha) this.selectFicha.value = '';
+  }
+
   toggleManualMode() {
     this.manualMode = !this.manualMode;
 

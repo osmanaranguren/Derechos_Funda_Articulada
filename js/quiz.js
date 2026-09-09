@@ -961,19 +961,37 @@ class QuizEngine {
 
     // Renderizar pantalla de resultados
     this.renderResults(evaluationRecord, saveResult);
+
+    // REGLA: Apenas termine la evaluación, si aprobó, abrir automáticamente la constancia para descargar su certificado
+    if (aprobado && window.recordsManager) {
+      setTimeout(() => {
+        window.recordsManager.showCertificate(evaluationRecord);
+        if (window.app && window.app.showToast) {
+          window.app.showToast('🎓 ¡Felicitaciones! Tu certificado de aprobación está listo para descargar.', 'success');
+        }
+      }, 700);
+    }
   }
 
   renderResults(record, saveResult) {
     const setupView = document.getElementById('quiz-setup-view');
     const runningView = document.getElementById('quiz-running-view');
     const resultsView = document.getElementById('quiz-results-view');
-    const resultCard = document.getElementById('quiz-result-card');
+    const resultCard = document.getElementById('quiz-result-card') || document.getElementById('quiz-result-summary-card');
 
     if (setupView) setupView.classList.add('hidden');
     if (runningView) runningView.classList.add('hidden');
-    if (resultsView) resultsView.classList.remove('hidden');
+    if (resultsView) {
+      resultsView.classList.remove('hidden');
+      resultsView.classList.add('animate-fadeIn');
+    }
 
-    if (!resultCard) return;
+    if (!resultCard) {
+      console.error('No se encontró el contenedor de resultados (#quiz-result-card o #quiz-result-summary-card)');
+      return;
+    }
+
+    window.scrollTo({ top: resultsView ? resultsView.offsetTop - 50 : 0, behavior: 'smooth' });
 
     const isPassed = record.aprobado;
     const currentAttempt = record.intento || 1;
@@ -981,6 +999,21 @@ class QuizEngine {
     const hasRemainingAttempt = isFirstAttemptFailed || (currentAttempt < 2 && !isPassed);
 
     resultCard.innerHTML = `
+      <!-- Barra Superior de Navegación Rápida -->
+      <div class="flex items-center justify-between pb-4 mb-6 border-b border-slate-200 dark:border-slate-700/60 flex-wrap gap-2 animate-fadeIn">
+        <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+          <span>📋</span> Reporte Oficial de Calificación
+        </span>
+        <button 
+          type="button"
+          onclick="window.quizEngine.returnToSetup(true)" 
+          class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm border border-slate-200 dark:border-slate-600"
+          title="Volver a la pantalla de registro para evaluar a otro estudiante o iniciar una nueva evaluación"
+        >
+          <span>↩️</span> Volver a Pantalla de Registro
+        </button>
+      </div>
+
       <div class="text-center mb-8 animate-fadeIn">
         <div class="inline-flex items-center justify-center w-24 h-24 rounded-full ${
           isPassed 
@@ -1021,6 +1054,24 @@ class QuizEngine {
             <p class="text-xs leading-relaxed">
               El SENA expide constancias de aprobación únicamente para evaluaciones con calificación igual o superior al <strong>70% (7/10)</strong>.
             </p>
+          </div>
+        ` : isPassed ? `
+          <!-- Banner destacado de Descarga Inmediata de Certificado -->
+          <div class="max-w-xl mx-auto mt-5 p-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-xl shadow-emerald-600/25 flex flex-col sm:flex-row items-center justify-between gap-4 text-left animate-fadeIn">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">📜</span>
+              <div>
+                <h4 class="font-black text-sm text-white">¡Certificado Oficial SENA Listo!</h4>
+                <p class="text-xs text-emerald-100">Haz clic para descargar, guardar en PDF o imprimir tu constancia.</p>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onclick="window.recordsManager.showCertificate(window.currentEvaluationResult)"
+              class="w-full sm:w-auto px-5 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition cursor-pointer transform hover:scale-105"
+            >
+              <span>📥</span> Descargar Certificado PDF
+            </button>
           </div>
         ` : ''}
 
@@ -1155,9 +1206,10 @@ class QuizEngine {
       </div>
 
       <!-- Botones de Acción (Condicionados a aprobación) -->
-      <div class="flex flex-wrap items-center justify-center gap-4 mb-10">
+      <div class="flex flex-wrap items-center justify-center gap-3.5 mb-10">
         ${isPassed ? `
           <button 
+            type="button"
             onclick="window.recordsManager.showCertificate(window.currentEvaluationResult)"
             class="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition transform hover:-translate-y-0.5 cursor-pointer"
           >
@@ -1166,27 +1218,38 @@ class QuizEngine {
         ` : ''}
 
         <button 
+          type="button"
+          onclick="window.quizEngine.returnToSetup(true)"
+          class="px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm flex items-center gap-2 shadow transition cursor-pointer"
+        >
+          <span>📝</span> Volver al Registro de Aprendiz
+        </button>
+
+        ${!isPassed && hasRemainingAttempt ? `
+          <button 
+            type="button"
+            onclick="window.quizEngine.restartQuiz()" 
+            class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-black text-sm flex items-center gap-2 transition shadow-md shadow-amber-600/20 cursor-pointer"
+          >
+            <span>🚀</span> Presentar Segundo Intento (2/2)
+          </button>
+        ` : ''}
+
+        <button 
+          type="button"
           onclick="window.app.navigateTo('slides')"
-          class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold text-sm flex items-center gap-2 shadow transition"
+          class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold text-sm flex items-center gap-2 shadow transition cursor-pointer"
         >
           <span>📖</span> Repasar Diapositivas
         </button>
 
         <button 
+          type="button"
           onclick="window.app.navigateTo('videos')"
-          class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold text-sm flex items-center gap-2 shadow transition"
+          class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold text-sm flex items-center gap-2 shadow transition cursor-pointer"
         >
           <span>🎬</span> Repasar Videoteca
         </button>
-
-        ${!isPassed && hasRemainingAttempt ? `
-          <button 
-            onclick="window.quizEngine.restartQuiz()" 
-            class="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-sm flex items-center gap-2 transition shadow-md shadow-emerald-600/20 cursor-pointer"
-          >
-            <span>🚀</span> Presentar Segundo Intento (2/2)
-          </button>
-        ` : ''}
       </div>
 
       <!-- Desglose de Respuestas y Justificaciones Pedagógicas Oficiales -->
@@ -1229,8 +1292,86 @@ class QuizEngine {
             </div>
           `).join('')}
         </div>
+
+        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700/60 flex flex-wrap items-center justify-center gap-4">
+          <button 
+            type="button"
+            onclick="window.quizEngine.returnToSetup(true)"
+            class="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm flex items-center gap-2 shadow transition cursor-pointer"
+          >
+            <span>↩️</span> Volver a la Pantalla de Registro
+          </button>
+          ${isPassed ? `
+            <button 
+              type="button"
+              onclick="window.recordsManager.showCertificate(window.currentEvaluationResult)"
+              class="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm flex items-center gap-2 shadow transition cursor-pointer"
+            >
+              <span>📜</span> Ver Certificado Digital
+            </button>
+          ` : ''}
+        </div>
       </div>
     `;
+  }
+
+  returnToSetup(clearForm = true) {
+    this.reset();
+    this.currentAttemptNumber = 1;
+
+    const setupView = document.getElementById('quiz-setup-view');
+    const runningView = document.getElementById('quiz-running-view');
+    const resultsView = document.getElementById('quiz-results-view');
+    const errorEl = document.getElementById('quiz-setup-error');
+    const startBtn = document.getElementById('btn-start-quiz');
+
+    if (clearForm) {
+      this.apprentice = {
+        nombre: '',
+        documento: '',
+        ficha: '',
+        colegio: '',
+        municipio: '',
+        grado: '',
+        programa: ''
+      };
+      const elName = document.getElementById('quiz-input-name');
+      const elDoc = document.getElementById('quiz-input-doc');
+      const elFicha = document.getElementById('quiz-input-ficha');
+      const elColegio = document.getElementById('quiz-input-colegio');
+      const elMun = document.getElementById('quiz-input-municipio');
+      const elProg = document.getElementById('quiz-input-programa');
+
+      if (elName) elName.value = '';
+      if (elDoc) elDoc.value = '';
+      if (elFicha) elFicha.value = '';
+      if (elColegio) elColegio.value = '';
+      if (elMun) elMun.value = '';
+      if (elProg) elProg.value = '';
+
+      if (window.institucionesSelector && typeof window.institucionesSelector.resetSelectors === 'function') {
+        window.institucionesSelector.resetSelectors();
+      }
+    }
+
+    if (errorEl) {
+      errorEl.classList.add('hidden');
+      errorEl.innerHTML = '';
+    }
+
+    if (startBtn) {
+      startBtn.disabled = false;
+      startBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'grayscale');
+      startBtn.innerHTML = '<span>🚀 Iniciar Cuestionario Oficial</span>';
+    }
+
+    if (resultsView) resultsView.classList.add('hidden');
+    if (runningView) runningView.classList.add('hidden');
+    if (setupView) setupView.classList.remove('hidden');
+
+    window.scrollTo({ top: setupView ? setupView.offsetTop - 50 : 0, behavior: 'smooth' });
+
+    if (window.soundEngine) window.soundEngine.playClick();
   }
 
   restartQuiz() {

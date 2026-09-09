@@ -115,6 +115,15 @@ class AppController {
     }
     if (viewName === 'quiz') {
       if (window.institucionesSelector) window.institucionesSelector.init();
+      const runningView = document.getElementById('quiz-running-view');
+      const resultsView = document.getElementById('quiz-results-view');
+      const setupView = document.getElementById('quiz-setup-view');
+      const isRunning = runningView && !runningView.classList.contains('hidden');
+      if (!isRunning) {
+        if (setupView && setupView.classList.contains('hidden') && (!resultsView || resultsView.classList.contains('hidden'))) {
+          setupView.classList.remove('hidden');
+        }
+      }
     }
     if (viewName === 'slides') {
       this.renderSlide(this.currentSlideIndex);

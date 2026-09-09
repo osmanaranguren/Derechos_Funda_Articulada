@@ -448,6 +448,8 @@ class RecordsManager {
       return;
     }
 
+    this.currentCertificateRecord = record;
+
     const modal = document.getElementById('certificate-modal');
     const certContent = document.getElementById('certificate-content');
     if (!modal || !certContent) return;
@@ -577,7 +579,17 @@ class RecordsManager {
   }
 
   printCertificate() {
+    const originalTitle = document.title;
+    const currentRec = this.currentCertificateRecord || window.currentEvaluationResult;
+    if (currentRec && currentRec.nombre) {
+      const cleanName = (currentRec.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_');
+      const cleanDoc = (currentRec.documento || '').replace(/[^a-zA-Z0-9]/g, '_');
+      document.title = `Certificado_SENA_DDHH_${cleanName}_${cleanDoc}`;
+    }
     window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1500);
   }
 
   // Exportar a Excel (CSV con UTF-8 BOM)
